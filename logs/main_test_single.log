@@ -1,0 +1,58 @@
+09:09:56 INFO: Set parameter Username
+09:09:56 INFO: Academic license - for non-commercial use only - expires 2022-06-04
+09:09:56 INFO: Set parameter LogFile to value "./logs/gurobi.log"
+09:09:56 INFO: Warning: constraint name "exit time" has a space
+09:09:56 INFO: Set parameter LazyConstraints to value 1
+09:09:56 INFO: Gurobi Optimizer version 9.5.1 build v9.5.1rc2 (win64)
+09:09:56 INFO: Thread count: 6 physical cores, 12 logical processors, using up to 12 threads
+09:09:56 INFO: Optimize a model with 468 rows, 330 columns and 1665 nonzeros
+09:09:56 INFO: Model fingerprint: 0xfa934efd
+09:09:56 INFO: Variable types: 10 continuous, 320 integer (320 binary)
+09:09:56 INFO: Coefficient statistics:
+09:09:56 INFO:   Matrix range     [1e+00, 1e+03]
+09:09:56 INFO:   Objective range  [3e-01, 1e+01]
+09:09:56 INFO:   Bounds range     [1e+00, 1e+00]
+09:09:56 INFO:   RHS range        [7e-01, 1e+03]
+09:09:56 INFO: Presolve removed 338 rows and 147 columns
+09:09:56 INFO: Presolve time: 0.03s
+09:09:56 INFO: Presolved: 130 rows, 183 columns, 867 nonzeros
+09:09:56 INFO: Variable types: 9 continuous, 174 integer (174 binary)
+09:09:56 INFO: 
+09:09:56 INFO: Root relaxation: objective 1.462846e+01, 130 iterations, 0.01 seconds (0.00 work units)
+09:09:56 INFO: 
+09:09:56 INFO:     Nodes    |    Current Node    |     Objective Bounds      |     Work
+09:09:56 INFO:  Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+09:09:56 INFO: 
+09:09:56 INFO:      0     0   14.62846    0   12          -   14.62846      -     -    0s
+09:09:56 INFO:      0     0   15.51985    0   22          -   15.51985      -     -    0s
+09:09:56 INFO:      0     0   16.69192    0   17          -   16.69192      -     -    0s
+09:09:56 INFO:      0     0   16.72251    0   18          -   16.72251      -     -    0s
+09:09:56 INFO:      0     0   16.78502    0   19          -   16.78502      -     -    0s
+09:09:56 INFO:      0     0   16.78502    0   19          -   16.78502      -     -    0s
+09:09:56 INFO:      0     0   16.79903    0   19          -   16.79903      -     -    0s
+09:09:56 INFO:      0     0   16.79903    0   16          -   16.79903      -     -    0s
+09:09:56 INFO: H    0     0                      29.8507717   16.79903  43.7%     -    0s
+09:09:56 INFO:      0     2   17.08085    0   16   29.85077   17.08085  42.8%     -    0s
+09:09:56 INFO: H   68    60                      28.7898789   17.17199  40.4%  10.1    0s
+09:09:56 INFO: *   75    60              10      26.2307418   17.17199  34.5%  10.8    0s
+09:09:56 INFO: 
+09:09:56 INFO: Cutting planes:
+09:09:56 INFO:   Learned: 9
+09:09:56 INFO:   Gomory: 1
+09:09:56 INFO:   Cover: 83
+09:09:56 INFO:   Implied bound: 36
+09:09:56 INFO:   Clique: 1
+09:09:56 INFO:   MIR: 14
+09:09:56 INFO:   Inf proof: 5
+09:09:56 INFO:   RLT: 8
+09:09:56 INFO:   Relax-and-lift: 9
+09:09:56 INFO: 
+09:09:56 INFO: Explored 2605 nodes (25415 simplex iterations) in 0.49 seconds (0.25 work units)
+09:09:56 INFO: Thread count was 12 (of 12 available processors)
+09:09:56 INFO: 
+09:09:56 INFO: Solution count 3: 26.2307 28.7899 29.8508 
+09:09:56 INFO: 
+09:09:56 INFO: Optimal solution found (tolerance 1.00e-04)
+09:09:56 INFO: Best objective 2.623074180783e+01, best bound 2.623074180783e+01, gap 0.0000%
+09:09:56 INFO: 
+09:09:56 INFO: User-callback calls 5792, time in user-callback 0.01 sec
