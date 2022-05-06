@@ -14,6 +14,7 @@ class HeuGroup2(Agent):
 
     def compute_VRP(self, delivery_to_do, vehicles):
         ris = []
+        print("Ciao")
         return ris
 
     def learn_and_save(self):
