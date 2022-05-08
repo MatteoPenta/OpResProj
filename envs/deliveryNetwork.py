@@ -127,6 +127,34 @@ class DeliveryNetwork():
         }
         self.generate_vols = vol_distr_dict[self.settings['vol_distr']['name']]
 
+    #
+    def evaluate_VRP(self, VRP_solution):
+            # USAGE COST
+            usage_cost = 0
+            for k in range(self.n_vehicles):
+                if len(VRP_solution[k]) > 0:
+                    usage_cost += self.vehicles[k]['cost']
+            # TOUR COST and CHECK TIME WINDOWS
+            travel_cost = 0
+            for k in range(self.n_vehicles):
+                travel_time = 0
+                tour_time = 0
+                for i in range(1, len(VRP_solution[k])-1):
+                    tour_time += self.distance_matrix[
+                        VRP_solution[k][i - 1],
+                        VRP_solution[k][i],
+                    ]
+                    travel_time += self.distance_matrix[
+                        VRP_solution[k][i - 1],
+                        VRP_solution[k][i],
+                    ]
+                    tour_time = max(
+                        tour_time, self.delivery_info[VRP_solution[k][i]]['time_window_min']
+                    )
+                    if tour_time > self.delivery_info[VRP_solution[k][i]]['time_window_max']:
+                        raise Exception('Too Late for Delivery: ', VRP_solution[k][i])
+                travel_cost += self.conv_time_to_cost * tour_time
+    #
 
     def evaluate_VRP(self, VRP_solution):
         # USAGE COST
@@ -134,19 +162,25 @@ class DeliveryNetwork():
         for k in range(self.n_vehicles):
             if len(VRP_solution[k]) > 0:
                 usage_cost += self.vehicles[k]['cost']
-
         # TOUR COST and CHECK TIME WINDOWS
         travel_cost = 0
         for k in range(self.n_vehicles):
+            travel_time = 0
             tour_time = 0
             for i in range(1, len(VRP_solution[k])-1):
                 tour_time += self.distance_matrix[
                     VRP_solution[k][i - 1],
                     VRP_solution[k][i],
                 ]
+                travel_time += self.distance_matrix[
+                    VRP_solution[k][i - 1],
+                    VRP_solution[k][i],
+                ]
+                tour_time = max(
+                    tour_time, self.delivery_info[VRP_solution[k][i]]['time_window_min']
+                )
                 if tour_time > self.delivery_info[VRP_solution[k][i]]['time_window_max']:
                     raise Exception('Too Late for Delivery: ', VRP_solution[k][i])
-
             travel_cost += self.conv_time_to_cost * tour_time
 
         # CHECK VOLUME
@@ -177,9 +211,14 @@ class DeliveryNetwork():
                     VRP_solution[k][i - 1],
                     VRP_solution[k][i],
                 ]
-                print(VRP_solution[k][i]-1)
                 delivery = self.delivery_info[VRP_solution[k][i]]
+                tour_time_after_waiting = max(
+                    tour_time,
+                    delivery['time_window_min']
+                )
+                print(VRP_solution[k][i]-1)
                 print(f"node: {delivery['id']}  arrival time: {tour_time:.2f}  [ {delivery['time_window_min']}-{delivery['time_window_max']} ] ")
+                tour_time = tour_time_after_waiting
             print(f"** **")
 
         fig = plt.figure()
