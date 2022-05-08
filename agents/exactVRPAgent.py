@@ -233,7 +233,7 @@ class ExactVRPAgent(Agent):
 
         self.model.Params.lazyConstraints = 1
         start = time.time()
-        self.model.optimize(subtourelim)
+        self.model.optimize()
         end = time.time()
         comp_time = end - start
 
