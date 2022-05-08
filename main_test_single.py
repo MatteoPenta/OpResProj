@@ -4,6 +4,7 @@ import logging
 import numpy as np
 from envs.deliveryNetwork import DeliveryNetwork
 from agents.exactVRPAgent import ExactVRPAgent
+from agents.heuGroup2 import HeuGroup2
 
 
 if __name__ == '__main__':
@@ -19,9 +20,9 @@ if __name__ == '__main__':
     settings = json.load(fp)
     fp.close()
 
-    env = DeliveryNetwork(settings, './data/delivery_data.csv')
+    env = DeliveryNetwork(settings, './data/delivery_data_1.csv')
 
-    agent = ExactVRPAgent(env)
+    agent = HeuGroup2(env)
 
     env.prepare_crowdsourcing_scenario()
     
