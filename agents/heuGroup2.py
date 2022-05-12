@@ -51,8 +51,6 @@ class HeuGroup2(Agent):
     def compute_VRP(self, delivery_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
         sol = []
 
-
-
         return sol
 
     def learn_and_save(self):
