@@ -325,3 +325,169 @@ Solution count 2: 19.8575 20.1347
 
 Optimal solution found (tolerance 1.00e-04)
 Best objective 1.985754127856e+01, best bound 1.985754127856e+01, gap 0.0000%
+
+Gurobi 9.5.1 (win64) logging started Thu May 12 18:39:44 2022
+
+Set parameter LogFile to value "./logs/gurobi.log"
+Warning: constraint name "exit time" has a space
+Set parameter LazyConstraints to value 1
+Gurobi Optimizer version 9.5.1 build v9.5.1rc2 (win64)
+Thread count: 6 physical cores, 12 logical processors, using up to 12 threads
+Optimize a model with 90 rows, 60 columns and 255 nonzeros
+Model fingerprint: 0xc534520c
+Variable types: 4 continuous, 56 integer (56 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+03]
+  Objective range  [8e-01, 1e+01]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+03]
+Presolve removed 57 rows and 30 columns
+Presolve time: 0.01s
+
+Explored 0 nodes (0 simplex iterations) in 0.01 seconds (0.00 work units)
+Thread count was 1 (of 12 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
+
+Gurobi 9.5.1 (win64) logging started Thu May 12 18:45:17 2022
+
+Set parameter LogFile to value "./logs/gurobi.log"
+Warning: constraint name "exit time" has a space
+Set parameter LazyConstraints to value 1
+Gurobi Optimizer version 9.5.1 build v9.5.1rc2 (win64)
+Thread count: 6 physical cores, 12 logical processors, using up to 12 threads
+Optimize a model with 90 rows, 60 columns and 255 nonzeros
+Model fingerprint: 0xc534520c
+Variable types: 4 continuous, 56 integer (56 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+03]
+  Objective range  [8e-01, 1e+01]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+03]
+Presolve removed 57 rows and 30 columns
+Presolve time: 0.00s
+
+Explored 0 nodes (0 simplex iterations) in 0.00 seconds (0.00 work units)
+Thread count was 1 (of 12 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
+
+Gurobi 9.5.1 (win64) logging started Thu May 12 18:46:13 2022
+
+Set parameter LogFile to value "./logs/gurobi.log"
+Warning: constraint name "exit time" has a space
+Set parameter LazyConstraints to value 1
+Gurobi Optimizer version 9.5.1 build v9.5.1rc2 (win64)
+Thread count: 6 physical cores, 12 logical processors, using up to 12 threads
+Optimize a model with 468 rows, 330 columns and 1665 nonzeros
+Model fingerprint: 0xfa934efd
+Variable types: 10 continuous, 320 integer (320 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+03]
+  Objective range  [3e-01, 1e+01]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [7e-01, 1e+03]
+Presolve removed 338 rows and 147 columns
+Presolve time: 0.01s
+Presolved: 130 rows, 183 columns, 867 nonzeros
+Variable types: 9 continuous, 174 integer (174 binary)
+
+Root relaxation: objective 1.462846e+01, 130 iterations, 0.01 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   14.62846    0   12          -   14.62846      -     -    0s
+     0     0   15.51985    0   22          -   15.51985      -     -    0s
+     0     0   16.69192    0   17          -   16.69192      -     -    0s
+     0     0   16.72251    0   18          -   16.72251      -     -    0s
+     0     0   16.78502    0   19          -   16.78502      -     -    0s
+     0     0   16.78502    0   19          -   16.78502      -     -    0s
+     0     0   16.79903    0   19          -   16.79903      -     -    0s
+     0     0   16.79903    0   16          -   16.79903      -     -    0s
+H    0     0                      29.8507717   16.79903  43.7%     -    0s
+     0     2   17.08085    0   16   29.85077   17.08085  42.8%     -    0s
+H   68    60                      28.7898789   17.17199  40.4%  10.1    0s
+*   75    60              10      26.2307418   17.17199  34.5%  10.8    0s
+
+Cutting planes:
+  Learned: 9
+  Gomory: 1
+  Cover: 83
+  Implied bound: 36
+  Clique: 1
+  MIR: 14
+  Inf proof: 5
+  RLT: 8
+  Relax-and-lift: 9
+
+Explored 2605 nodes (25415 simplex iterations) in 0.41 seconds (0.25 work units)
+Thread count was 12 (of 12 available processors)
+
+Solution count 3: 26.2307 28.7899 29.8508 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 2.623074180783e+01, best bound 2.623074180783e+01, gap 0.0000%
+
+Gurobi 9.5.1 (win64) logging started Thu May 12 18:46:42 2022
+
+Set parameter LogFile to value "./logs/gurobi.log"
+Warning: constraint name "exit time" has a space
+Set parameter LazyConstraints to value 1
+Gurobi Optimizer version 9.5.1 build v9.5.1rc2 (win64)
+Thread count: 6 physical cores, 12 logical processors, using up to 12 threads
+Optimize a model with 468 rows, 330 columns and 1665 nonzeros
+Model fingerprint: 0xfa934efd
+Variable types: 10 continuous, 320 integer (320 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+03]
+  Objective range  [3e-01, 1e+01]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [7e-01, 1e+03]
+Presolve removed 338 rows and 147 columns
+Presolve time: 0.01s
+Presolved: 130 rows, 183 columns, 867 nonzeros
+Variable types: 9 continuous, 174 integer (174 binary)
+
+Root relaxation: objective 1.462846e+01, 130 iterations, 0.00 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   14.62846    0   12          -   14.62846      -     -    0s
+     0     0   15.51985    0   22          -   15.51985      -     -    0s
+     0     0   16.69192    0   17          -   16.69192      -     -    0s
+     0     0   16.72251    0   18          -   16.72251      -     -    0s
+     0     0   16.78502    0   19          -   16.78502      -     -    0s
+     0     0   16.78502    0   19          -   16.78502      -     -    0s
+     0     0   16.79903    0   19          -   16.79903      -     -    0s
+     0     0   16.79903    0   16          -   16.79903      -     -    0s
+H    0     0                      29.8507717   16.79903  43.7%     -    0s
+     0     2   17.08085    0   16   29.85077   17.08085  42.8%     -    0s
+H   68    60                      28.7898789   17.17199  40.4%  10.1    0s
+*   75    60              10      26.2307418   17.17199  34.5%  10.8    0s
+
+Cutting planes:
+  Learned: 9
+  Gomory: 1
+  Cover: 83
+  Implied bound: 36
+  Clique: 1
+  MIR: 14
+  Inf proof: 5
+  RLT: 8
+  Relax-and-lift: 9
+
+Explored 2605 nodes (25415 simplex iterations) in 0.36 seconds (0.25 work units)
+Thread count was 12 (of 12 available processors)
+
+Solution count 3: 26.2307 28.7899 29.8508 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 2.623074180783e+01, best bound 2.623074180783e+01, gap 0.0000%

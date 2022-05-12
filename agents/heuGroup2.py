@@ -49,8 +49,11 @@ class HeuGroup2(Agent):
         return id_to_crowdship 
 
     def compute_VRP(self, delivery_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
-        ris = []
-        return ris
+        sol = []
+
+
+
+        return sol
 
     def learn_and_save(self):
         time.sleep(7)
