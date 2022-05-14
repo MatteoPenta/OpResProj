@@ -21,9 +21,9 @@ if __name__ == '__main__':
     settings = json.load(fp)
     fp.close()
 
-    env = DeliveryNetwork(settings)
+    env = DeliveryNetwork(settings, './data/delivery_data.csv')
 
-    agent = ExactVRPAgent(env)
+    agent = HeuGroup2(env)
 
     env.prepare_crowdsourcing_scenario()
     

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+from turtle import distance
 from agents import *
 from scipy import spatial
 import numpy as np
@@ -21,36 +22,48 @@ class HeuGroup2(Agent):
             return []
         points = []
         self.delivery = []
+        points.append([0,0]) # depot position
         for _, ele in deliveries.items():
             points.append([ele['lat'], ele['lng']])
             self.delivery.append(ele)
-        # evaluate the distance of each point from the ORIGIN
-        distance_matrix = spatial.distance_matrix([[0,0]], points)
+        # evaluate the distance matrix
+        self.distance_matrix = spatial.distance_matrix(points, points)
 
-        for i in range(len(distance_matrix[0, :])):
+        for i in range(len(self.delivery)):
+            # evaluate the distance of every delivery from the depot
+            self.delivery[i]['dist_from_depot'] = self.distance_matrix[0,i+1]
             # evaluate the score of the delivery
             self.delivery[i]['score'] = self.deliv_crowds_weights['a']*(1-self.delivery[i]['p_failed']) + \
-                self.deliv_crowds_weights['b']*distance_matrix[0,i]
+                self.deliv_crowds_weights['b']*self.delivery[i]['dist_from_depot']
             print(f"[DEBUG] Score of node {self.delivery[i]['id']}: {self.delivery[i]['score']}")
-            print(f"        Distance of node {self.delivery[i]['id']}: {distance_matrix[0,i]}")
+            print(f"        Distance of node {self.delivery[i]['id']}: {self.delivery[i]['dist_from_depot']}")
 
         # 2) evaluate the threshold based on self.quantile
         threshold = np.quantile([dlv['score'] for dlv in self.delivery], self.quantile)
         print(f"Threshold: {threshold}")
-        threshold_dist = np.quantile(distance_matrix[0, :], self.quantile)
-        print(f"Disance threshold: {threshold_dist}")
+        threshold_dist = np.quantile([d['dist_from_depot'] for d in self.delivery], self.quantile)
+        print(f"Distance threshold: {threshold_dist}")
         
         # 3) select the deliveries with score above threshold
         id_to_crowdship = []
-        for i in range(len(self.delivery)):
-            if self.delivery[i]['score'] > threshold:
-                id_to_crowdship.append(i)
+        for ele in self.delivery:
+            if ele['score'] > threshold:
+                id_to_crowdship.append(ele['id'])
         
         return id_to_crowdship 
 
     def compute_VRP(self, delivery_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
-        sol = []
+        for i in range(len(self.delivery)):
+            self.delivery[i]['chosen_vrp'] = False
 
+        sol = []
+        for k in range(len(vehicles_dict)):
+            sol[k] = [] # initialize the solution for the k-th vehicle
+            sol[k].append(0) # add the depot to the k-th solution
+            
+            # the flag will be set to 1 if feasible insertions are found for any non-connected node
+            feasible_nodes_flag = 0 
+            
         return sol
 
     def learn_and_save(self):
