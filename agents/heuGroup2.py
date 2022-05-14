@@ -56,13 +56,31 @@ class HeuGroup2(Agent):
         for i in range(len(self.delivery)):
             self.delivery[i]['chosen_vrp'] = False
 
+        # sort self.delivery based on their distance from the depot
+        self.delivery.sort(key=lambda x:x['dist_from_depot'])
+
         sol = []
         for k in range(len(vehicles_dict)):
             sol[k] = [] # initialize the solution for the k-th vehicle
             sol[k].append(0) # add the depot to the k-th solution
             
-            # the flag will be set to 1 if feasible insertions are found for any non-connected node
-            feasible_nodes_flag = 0 
+            # add the closest delivery that is still available to the 
+            # solution of this vehicle
+            aval_d = [d for d in self.delivery if d['chosen_vrp'] == False]
+            if aval_d:
+                sol[k].append(aval_d[0])
+                aval_d[0]['chosen_vrp'] = True
+
+            # the flag will be set to False and then to True again only if 
+            # feasible insertions are found for any non-connected node
+            feasible_nodes_flag = True
+            while(feasible_nodes_flag):
+                feasible_nodes_flag = False
+                # Consider all deliveries not yet inserted in a solution
+                for d in [d for d in self.delivery if d['chosen_vrp'] == False]:
+                    # Find the best position of the delivery d among every
+                    # pair of deliveries already in the solution
+                    print("CONTINUA DA QUI")
             
         return sol
 
