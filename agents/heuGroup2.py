@@ -15,6 +15,9 @@ class HeuGroup2(Agent):
             "a": 0.5,
             "b": 0.5
         }
+        # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
+        self.alpha1_c1_vrp = 0.5
+        self.alpha2_c1_v2p = 0.5
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -97,21 +100,57 @@ class HeuGroup2(Agent):
             feasible_nodes_flag = True
             while(feasible_nodes_flag):
                 feasible_nodes_flag = False
-                # Consider all deliveries not yet inserted in a solution
+                # Consider all deliveries not yet inserted in a solution.
+                # For each one, save its best position in the path in "best_pos_all",
+                # a dictionary containing the nodes' ids as keys and their best position 
+                # in the path as value (stored as a list, see below).
+                best_pos_all = {}
                 for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left'])]:
                     # Find the best position of the delivery d among every
                     # pair of deliveries already in the solution.
                     # Each iteration of this loop considers a different positioning
                     # of the delivery "d", where "prev_n" and "next_n" are the indiced of 
                     # the nodes that precede and follow "d".
+                    
+                    # Initialize the list containing the best positioning for "d" in terms
+                    # of previous / following nodes and cost function c1.
+                    #   best_pos_d = [<prev_n>, <next_n>, <c1>]
+                    # where <prev_n> and <next_n> are given as indices in the sol[k] lists.
+                    best_pos_d = ['','',0]
                     for i in range(len(sol[k]['path'])-1):
+                        # Indexes of the nodes that precede and follow "d" inside
+                        # the lists contained in sol[k]
                         prev_n = i
                         next_n = i+1
                         # Check time feasibility considering this insertion
+                        if self.nodeTimeFeasibleVRP(sol[k], prev_n, d, next_n):
+                            feasible_nodes_flag = True
+                            # If this positioning of "d" is feasible, evaluate its
+                            # cost c1 and compare it with the minimum found
+                            c1 = self.getC1(sol[k], prev_n, d, next_n)
+                            if not best_pos_d[0]: # first time
+                                best_pos_d = [prev_n, next_n, c1]
+                            elif c1 < best_pos_d[2]: # found a better placing
+                                # update the min
+                                best_pos_d = [prev_n, next_n, c1]
+                    if best_pos_d[0]: # if a best placing was found, add it to "best_pos_all"
+                        best_pos_all[d['id']] = best_pos_d
 
-                        
-            
-        return sol
+                # Choose which one of the nodes d (for which a best placing inside this path was found)
+                # will be included in the path of the k-th vehicle. 
+                # The choice is based on the cost function C2.
+                if feasible_nodes_flag:
+                    best_d_id = self.getBestDelivery()
+                    # 1) Add the new delivery before the depot at the end of the path
+                    # 2) insert the new arrival and waiting times
+                    # 3) update all the arrival & waiting times of the following deliveries
+                    # 4) update the volume left in the vehicle
+                    self.updatePath(sol[k], best_d_id, best_pos_all)
+                    
+                    # 5) set the chosen_vrp of the delivery to True
+                    self.delivery[best_d_id]['chosen_vrp'] = True
+
+        return [s['path'] for s in sol]
 
     def nodeIsFeasibleVRP(self, d, v_vol_left):
         """
@@ -131,10 +170,154 @@ class HeuGroup2(Agent):
             return True
         return False
 
-    def nodeTimeFeasibleVRP(self, sol_k, prev_n, u, next_n):
-        arr_time_u = prev_n['arrival_time']
-        self.distance_matrix[prev_n['index'], next_n['index']] # ...
-        # ...
+    def nodeTimeFeasibleVRP(self, sol_k, prev_n_sol, d, next_n_sol):
+        """
+        Description
+
+        Parameters
+            :param
+            :type
+            :param
+            :type
+            :param
+            :type
+            :param
+            :type
+
+        Output
+            :returns        True/False
+            :rtype          bool
+        """
+        # check if the arrival time of d is lower than the upper bound of its
+        # time window
+        prev_n_id = sol_k['path'][prev_n_sol]
+        prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
+        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
+            sol_k['waiting_times'][prev_n_sol] + \
+            dist_prev_d
+        if arr_time_d > d['time_window_max']:
+            return False
+        
+        # Evaluate the first Push-forward PF
+        next_n_id = sol_k['path'][next_n_sol]
+        next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
+        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+        waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
+        next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
+        PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
+        for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
+            # If PF == 0: time feasibility is guaranteed from this point on. Return true
+            # If PF + arrival time exceeds the time window upper bound, return False
+            if PF == 0:
+                return True
+            elif sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                return False
+            
+            # If it hasn't returned, update PF to check the next delivery in the path.
+            # NOTE: if the node after next_n_sol in the path is the depot, stop 
+            if next_n_sol + 1 != len(sol_k['path']):
+                PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
+
+        # if it has arrived to this point, it means that the time feasibility is 
+        # respected for all deliveries in the path after the new one
+        return True
+
+
+    def getC1(self, sol_k, prev_n_sol, d, next_n_sol):
+        """
+        Description
+
+        Parameters
+            :param
+            :type
+            :param
+            :type
+            :param
+            :type
+            :param
+            :type
+
+        Output
+            :returns        True/False
+            :rtype          bool
+        """
+        prev_n_id = sol_k['path'][prev_n_sol]
+        prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
+        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+
+        next_n_id = sol_k['path'][next_n_sol]
+        next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
+        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+
+        dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
+
+        c11 = dist_prev_d + dist_d_next - dist_prev_next
+        
+        arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
+                sol_k['waiting_times'][prev_n_sol] + \
+                dist_prev_d
+        waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
+        new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
+
+        c12 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
+
+        c1 = self.alpha1_c1_vrp*c11 + self.alpha2_c1_v2p*c12
+        return c1
+
+    def getC2(self):
+        """
+        """
+
+    def getBestDelivery(self):
+        """
+        """
+
+    def updatePath(self, sol_k, best_d_id, best_pos_all):
+        """
+        """
+        prev_n_sol = best_pos_all[best_d_id][0]
+        next_n_sol = best_pos_all[best_d_id][1]
+        # 1) Add the new delivery in the chosen place
+        sol_k['path'].insert(prev_n_sol+1, best_d_id)
+        # update the index of next_n
+        next_n_sol += 1
+
+        # 2) insert the new arrival and waiting times
+        prev_n_id = sol_k['path'][prev_n_sol]
+        prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
+        dist_prev_d = self.distance_matrix[prev_n_index, self.delivery[best_d_id]['index']] # distance between prev_n and d
+        arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
+            sol_k['waiting_times'][prev_n_sol] + \
+                dist_prev_d
+        waiting_time_d = max(0, self.delivery[best_d_id]['time_window_min'] - arr_time_d)
+        sol_k['arrival_times'].insert(prev_n_sol+1, arr_time_d)
+        sol_k['waiting_times'].insert(prev_n_sol+1, waiting_time_d)
+
+
+        # 3) update all the arrival & waiting times of the following deliveries
+        next_n_id = sol_k['path'][next_n_sol]
+        next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
+        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+        new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
+
+        additional_delay_flag = True
+        while additional_delay_flag and next_n_sol < len(sol_k['path'])-1:
+            # Update the arrival time at next_n
+            sol_k['arrival_times'][next_n_sol] = new_arr_time_next
+            arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
+            sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
+            if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
+                # update the arrival time at the delivery after "next_n" taking into consideration
+                # the delay that was introduced at "next_n"
+                next_n_sol += 1
+                if next_n_sol < len(sol_k['path'])-1:
+                    new_arr_time_next = sol_k['arrival_times'][next_n_sol] - arr_time_relative
+            else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
+                additional_delay_flag = False
+        
+        # 4) update the volume left in the vehicle
+        sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
 
 
     def learn_and_save(self):
