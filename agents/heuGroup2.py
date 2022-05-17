@@ -193,8 +193,11 @@ class HeuGroup2(Agent):
         # check if the arrival time of d is lower than the upper bound of its
         # time window
         prev_n_id = sol_k['path'][prev_n_sol]
-        prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        if prev_n_id == 0: # depot (first element in the path)
+            dist_prev_d = d['dist_from_depot']
+        else:
+            prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
+            dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
             dist_prev_d
@@ -272,9 +275,27 @@ class HeuGroup2(Agent):
         """
         return self.lambda_vrp*d['dist_from_depot'] - c1
 
+    def compareC2(self, c2_first, c2_second):
+        """
+        Compare two values of the cost function C2 and return True if the 
+        first one is better than the second, false otherwise.
+        In this implementation, "better" means higher.
+        """
+        return c2_first > c2_second
+
     def getBestDelivery(self, sol_k, best_pos_all):
         """
         """
+        best_d = ["", 0] # [<id>, <c2>]
+        for d_id in best_pos_all:
+            c2_d = self.getC2(self.delivery[d_id], best_pos_all[d_id][2])
+            # compare the cost c2 of the currently selected delivery "d_id"
+            # with the optimum one. Update the optimum if better.
+            if self.compareC2(c2_d, best_d[1]):
+                best_d = [d_id, c2_d]
+
+        return best_d[0] # return the id of the delivery with optimum c2
+
 
     def updatePath(self, sol_k, best_d_id, best_pos_all):
         """
