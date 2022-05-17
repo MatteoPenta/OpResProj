@@ -16,8 +16,10 @@ class HeuGroup2(Agent):
             "b": 0.5
         }
         # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
-        self.alpha1_c1_vrp = 0.5
-        self.alpha2_c1_v2p = 0.5
+        self.mu_vrp = 1
+        self.alpha1_c1_vrp = 1
+        self.alpha2_c1_v2p = 0
+        self.lambda_vrp = 1
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -140,7 +142,7 @@ class HeuGroup2(Agent):
                 # will be included in the path of the k-th vehicle. 
                 # The choice is based on the cost function C2.
                 if feasible_nodes_flag:
-                    best_d_id = self.getBestDelivery()
+                    best_d_id = self.getBestDelivery(sol[k], best_pos_all)
                     # 1) Add the new delivery before the depot at the end of the path
                     # 2) insert the new arrival and waiting times
                     # 3) update all the arrival & waiting times of the following deliveries
@@ -252,7 +254,7 @@ class HeuGroup2(Agent):
 
         dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
 
-        c11 = dist_prev_d + dist_d_next - dist_prev_next
+        c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
                 sol_k['waiting_times'][prev_n_sol] + \
@@ -265,11 +267,12 @@ class HeuGroup2(Agent):
         c1 = self.alpha1_c1_vrp*c11 + self.alpha2_c1_v2p*c12
         return c1
 
-    def getC2(self):
+    def getC2(self, d, c1):
         """
         """
+        return self.lambda_vrp*d['dist_from_depot'] - c1
 
-    def getBestDelivery(self):
+    def getBestDelivery(self, sol_k, best_pos_all):
         """
         """
 
@@ -308,7 +311,7 @@ class HeuGroup2(Agent):
             arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
             sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
             if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
-                # update the arrival time at the delivery after "next_n" taking into consideration
+                # Update the arrival time at the delivery after "next_n" taking into consideration
                 # the delay that was introduced at "next_n"
                 next_n_sol += 1
                 if next_n_sol < len(sol_k['path'])-1:
