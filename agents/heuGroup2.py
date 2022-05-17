@@ -96,6 +96,7 @@ class HeuGroup2(Agent):
                 sol[k]['arrival_times'].append(
                     sol[k]['arrival_times'][-1]+sol[k]['waiting_times'][-1]+sol[k]['arrival_times'][-1]
                 )
+                sol[k]['waiting_times'].append(0)
 
             # the flag will be set to False and then to True again only if 
             # feasible insertions are found for any non-connected node
@@ -142,6 +143,10 @@ class HeuGroup2(Agent):
                 # will be included in the path of the k-th vehicle. 
                 # The choice is based on the cost function C2.
                 if feasible_nodes_flag:
+                    # DEBUG
+                    print("[DEBUG} best_pos_all:\n\t")
+                    print(best_pos_all)
+                    print(f"[DEBUG] id in best_pos_all: {}")
                     best_d_id = self.getBestDelivery(sol[k], best_pos_all)
                     # 1) Add the new delivery before the depot at the end of the path
                     # 2) insert the new arrival and waiting times
@@ -206,23 +211,25 @@ class HeuGroup2(Agent):
         
         # Evaluate the first Push-forward PF
         next_n_id = sol_k['path'][next_n_sol]
-        next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
-        waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
-        next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
-        PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
-        for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
-            # If PF == 0: time feasibility is guaranteed from this point on. Return true
-            # If PF + arrival time exceeds the time window upper bound, return False
-            if PF == 0:
-                return True
-            elif sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
-                return False
+        if next_n_id != 0: # not the depot (last element in the path)
+            next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
+            dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+            next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
+            waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
+            PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
             
-            # If it hasn't returned, update PF to check the next delivery in the path.
-            # NOTE: if the node after next_n_sol in the path is the depot, stop 
-            if next_n_sol + 1 != len(sol_k['path']):
-                PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
+            for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
+                # If PF == 0: time feasibility is guaranteed from this point on. Return true
+                # If PF + arrival time exceeds the time window upper bound, return False
+                if PF == 0:
+                    return True
+                elif sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                    return False
+                
+                # If it hasn't returned, update PF to check the next delivery in the path.
+                # NOTE: if the node after next_n_sol in the path is the depot, stop 
+                if next_n_sol + 1 != len(sol_k['path'])-1:
+                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
 
         # if it has arrived to this point, it means that the time feasibility is 
         # respected for all deliveries in the path after the new one
@@ -247,15 +254,26 @@ class HeuGroup2(Agent):
             :returns        True/False
             :rtype          bool
         """
+
         prev_n_id = sol_k['path'][prev_n_sol]
-        prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        if prev_n_id == 0: # depot (first element in the path)
+            dist_prev_d = d['dist_from_depot']
+        else:
+            prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
+            dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
 
         next_n_id = sol_k['path'][next_n_sol]
-        next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+        if next_n_id == 0: # depot (last element in the path)
+            next_n_index = 0
+            dist_d_next = d['dist_from_depot']
+        else:
+            next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
+            dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
 
-        dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
+        if prev_n_id == 0:
+            dist_prev_next = self.delivery[next_n_id]['dist_from_depot']
+        else:
+            dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
 
         c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
         
@@ -300,6 +318,7 @@ class HeuGroup2(Agent):
     def updatePath(self, sol_k, best_d_id, best_pos_all):
         """
         """
+        print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
         prev_n_sol = best_pos_all[best_d_id][0]
         next_n_sol = best_pos_all[best_d_id][1]
         # 1) Add the new delivery in the chosen place
@@ -326,19 +345,22 @@ class HeuGroup2(Agent):
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
         additional_delay_flag = True
-        while additional_delay_flag and next_n_sol < len(sol_k['path'])-1:
+        while additional_delay_flag and next_n_sol < len(sol_k['path']):
             # Update the arrival time at next_n
             sol_k['arrival_times'][next_n_sol] = new_arr_time_next
-            arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
-            sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
-            if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
-                # Update the arrival time at the delivery after "next_n" taking into consideration
-                # the delay that was introduced at "next_n"
-                next_n_sol += 1
-                if next_n_sol < len(sol_k['path'])-1:
-                    new_arr_time_next = sol_k['arrival_times'][next_n_sol] - arr_time_relative
-            else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
-                additional_delay_flag = False
+            if next_n_sol != len(sol_k['path'])-1: # NOT the depot
+                arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
+                sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
+                if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
+                    # Update the arrival time at the delivery after "next_n" taking into consideration
+                    # the delay that was introduced at "next_n"
+                    next_n_sol += 1
+                    if next_n_sol < len(sol_k['path']):
+                        new_arr_time_next = sol_k['arrival_times'][next_n_sol] - arr_time_relative
+                else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
+                    additional_delay_flag = False
+            else:
+                next_n_sol +=1
         
         # 4) update the volume left in the vehicle
         sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
