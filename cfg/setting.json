@@ -2,7 +2,7 @@
     "n_deliveries": 20,
     "n_vehicles": 4,
     "vols_vehicles": [20, 10, 10, 10],
-    "costs_vehicles": [20, 10, 5, 5],
+    "costs_vehicles": [20, 10, 10, 5],
     "vol_distr": {
         "name": "uniform",
         "min_vol_bins": 0.5,
