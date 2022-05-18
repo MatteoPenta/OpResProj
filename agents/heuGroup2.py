@@ -88,9 +88,7 @@ class HeuGroup2(Agent):
         sol = []
         for k in range(len(vehicles_dict)):
             # Initialize the solution for the k-th vehicle.
-            # Add the depot as the first delivery of the path
-            # of the vehicle
-            sol.append({'path': [0],'arrival_times':[0], 'waiting_times': [0],
+            sol.append({'path': [],'arrival_times':[], 'waiting_times': [],
                 'vol_left': vehicles_dict[k]['capacity']}) 
             
             # add to the solution of this vehicle the closest delivery that:
@@ -106,6 +104,11 @@ class HeuGroup2(Agent):
             print(f"[DEBUG] distance from depot to 4: {self.distance_matrix[0,4]}")
             print(f"[DEBUG] aval_d: {aval_d}")
             if aval_d:
+                # add the depot as first node in the solution
+                sol[k]['path'].append(0)
+                sol[k]['arrival_times'].append(0)
+                sol[k]['waiting_times'].append(0)
+
                 sol[k]['path'].append(aval_d[0]['id'])
                 sol[k]['arrival_times'].append(self.distance_matrix[0,aval_d[0]['index']])
                 sol[k]['waiting_times'].append(max(0,
