@@ -236,7 +236,9 @@ class DeliveryNetwork():
     def _add_tour(self, VRP_solution):
         dict_vehicle_char = [
             ('red', '--'),
-            ('blue', '.')
+            ('blue', '.'),
+            ('green', '-'),
+            ('black', '.-')
         ]
         for k in range(self.n_vehicles):
             if len(VRP_solution[k]) == 0:

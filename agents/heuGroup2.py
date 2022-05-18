@@ -247,16 +247,18 @@ class HeuGroup2(Agent):
         
         # Evaluate the first Push-forward PF
         next_n_id = sol_k['path'][next_n_sol]
+            
         if next_n_id != 0: # not the depot (last element in the path)
             next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
             dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
-            next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
             waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
             PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
             
             for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
                 # If PF == 0: time feasibility is guaranteed from this point on. Return true
                 # If PF + arrival time exceeds the time window upper bound, return False
+                next_n_id = sol_k['path'][next_n_sol]
+                next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
                 if PF == 0:
                     return True
                 elif sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
