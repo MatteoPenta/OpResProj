@@ -42,7 +42,6 @@ class HeuGroup2(Agent):
             # evaluate the score of the delivery
             self.delivery[d]['score'] = self.deliv_crowds_weights['a']*(1-self.delivery[d]['p_failed']) + \
                 self.deliv_crowds_weights['b']*self.delivery[d]['dist_from_depot']
-            print(f"[DEBUG] Score of node {self.delivery[d]['id']}: {self.delivery[d]['score']}")
             print(f"        Distance of node {self.delivery[d]['id']}: {self.delivery[d]['dist_from_depot']}")
             i += 1
 
@@ -63,7 +62,6 @@ class HeuGroup2(Agent):
     def compute_VRP(self, deliveries_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
         for d in self.delivery:
             if d in deliveries_to_do:
-                print(f"Delivery {d} is in deliveries_to_do") #DEBUG
                 self.delivery[d]['crowdshipped'] = False
             else:
                 self.delivery[d]['crowdshipped'] = True
@@ -73,13 +71,10 @@ class HeuGroup2(Agent):
 
         # sort self.delivery based on their distance from the depot
 
-        # DEBUG
-        print("[DEBUG] self.delivery:")
         print(self.delivery)
         print("Distance matrix:")
         print(self.distance_matrix)
         self.delivery = dict(sorted(self.delivery.items(), key=lambda x:x[1]['dist_from_depot']))
-        print("[DEBUG] self.delivery:")
         print(self.delivery)
         print("Distance matrix:")
         print(self.distance_matrix)
@@ -102,9 +97,7 @@ class HeuGroup2(Agent):
                     self.distance_matrix[0,d['index']] < d['time_window_max']) and \
                     d['crowdshipped'] == False]
 
-            # DEBUG
-            print(f"[DEBUG] distance from depot to 4: {self.distance_matrix[0,4]}")
-            print(f"[DEBUG] aval_d: {aval_d}")
+            
             if aval_d:
                 sol[k]['path'].append(aval_d[0]['id'])
                 sol[k]['arrival_times'].append(self.distance_matrix[0,aval_d[0]['index']])
@@ -166,8 +159,6 @@ class HeuGroup2(Agent):
                 # will be included in the path of the k-th vehicle. 
                 # The choice is based on the cost function C2.
                 if feasible_nodes_flag:
-                    # DEBUG
-                    print("[DEBUG} best_pos_all:\n\t")
                     print(best_pos_all)
                     '''
                     k = [k for k in best_pos_all.keys()]
@@ -175,8 +166,6 @@ class HeuGroup2(Agent):
                     '''
 
                     best_d_id = self.getBestDelivery(sol[k], best_pos_all)
-                    # DEBUG
-                    #print(f"[DEBUG] best_d_id: {best_d_id}")
 
                     # 1) Add the new delivery before the depot at the end of the path
                     # 2) insert the new arrival and waiting times
@@ -237,10 +226,6 @@ class HeuGroup2(Agent):
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
             dist_prev_d
-        
-        # DEBUG
-        print(f"[DEBUG] d: {d['id']} | arr_time_d: {arr_time_d}")
-        print(f"[DEBUG] time_window_max of d: {d['time_window_max']}")
         
         if arr_time_d > d['time_window_max']:
             return False
@@ -346,8 +331,6 @@ class HeuGroup2(Agent):
         for d_id in best_pos_all:
             c2_d = self.getC2(self.delivery[d_id], best_pos_all[d_id][2])
 
-            print(f"[DEBUG] c2_d: {c2_d}")
-
             # compare the cost c2 of the currently selected delivery "d_id"
             # with the optimum one. Update the optimum if better.
             if best_d[0] == None: # first check
@@ -361,7 +344,6 @@ class HeuGroup2(Agent):
     def updatePath(self, sol_k, best_d_id, best_pos_all):
         """
         """
-        print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
         prev_n_sol = best_pos_all[best_d_id][0]
         next_n_sol = best_pos_all[best_d_id][1]
         # 1) Add the new delivery in the chosen place
