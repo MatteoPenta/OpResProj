@@ -65,16 +65,24 @@ class HeuGroup2(Agent):
         if len(deliveries) == 0:
             return []
         points = []
-        self.delivery = []
+        self.delivery = deliveries
+        points.append([0,0]) # depot
         for _, ele in deliveries.items():
             points.append([ele['lat'], ele['lng']])
-            self.delivery.append(ele)
-        distance_matrix = spatial.distance_matrix(points, points)
+        self.distance_matrix = spatial.distance_matrix(points, points)
 
-        threshold = np.quantile(distance_matrix[0, :], self.quantile)
+        i = 1
+        for d in self.delivery:
+            # save the original index of the delivery 
+            self.delivery[d]['index'] = i
+            # evaluate the distance of every delivery from the depot
+            self.delivery[d]['dist_from_depot'] = self.distance_matrix[0,i]
+            i += 1
+
+        threshold = np.quantile(self.distance_matrix[0, :], self.quantile)
         id_to_crowdship = []
-        for i in range(len(distance_matrix[0, :])):
-            if distance_matrix[0, i] > threshold:
+        for i in range(len(self.distance_matrix[0, :])):
+            if self.distance_matrix[0, i] > threshold:
                 id_to_crowdship.append(i)
 
         return id_to_crowdship
