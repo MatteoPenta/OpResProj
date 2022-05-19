@@ -10,16 +10,16 @@ class HeuGroup2(Agent):
     def __init__(self, env):
         self.name = "HeuGroup2"
         self.env = env
-        self.quantile = 0.8 #DEBUG
+        self.quantile = 1 #DEBUG
         self.deliv_crowds_weights = {
             "a": 0.5,
             "b": 0.5
         }
         # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
         self.mu_vrp = 1
-        self.alpha1_c1_vrp = 1
-        self.alpha2_c1_v2p = 0
-        self.lambda_vrp = 1
+        self.alpha1_c1_vrp = 0.8
+        self.alpha2_c1_v2p = 0.2
+        self.lambda_vrp = 2
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -145,7 +145,7 @@ class HeuGroup2(Agent):
                     # of previous / following nodes and cost function c1.
                     #   best_pos_d = [<prev_n>, <next_n>, <c1>]
                     # where <prev_n> and <next_n> are given as indices in the sol[k] lists.
-                    best_pos_d = ['','',0]
+                    best_pos_d = []
                     for i in range(len(sol[k]['path'])-1):
                         # Indexes of the nodes that precede and follow "d" inside
                         # the lists contained in sol[k]
@@ -157,12 +157,12 @@ class HeuGroup2(Agent):
                             # If this positioning of "d" is feasible, evaluate its
                             # cost c1 and compare it with the minimum found
                             c1 = self.getC1(sol[k], prev_n, d, next_n)
-                            if not best_pos_d[0]: # first time
+                            if not best_pos_d: # first time
                                 best_pos_d = [prev_n, next_n, c1]
                             elif c1 < best_pos_d[2]: # found a better placing
                                 # update the min
                                 best_pos_d = [prev_n, next_n, c1]
-                    if best_pos_d[0]: # if a best placing was found, add it to "best_pos_all"
+                    if best_pos_d: # if a best placing was found, add it to "best_pos_all"
                         best_pos_all[d['id']] = best_pos_d
 
                 # Choose which one of the nodes d (for which a best placing inside this path was found)

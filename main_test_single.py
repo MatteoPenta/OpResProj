@@ -9,7 +9,7 @@ from agents.heuGroup2 import HeuGroup2
 
 
 if __name__ == '__main__':
-    np.random.seed(0)
+    np.random.seed(221)
     log_name = "./logs/main_test_single.log"
     logging.basicConfig(
         filename=log_name,
