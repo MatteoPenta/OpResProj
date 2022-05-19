@@ -19,7 +19,8 @@ class HeuGroup2(Agent):
         self.mu_vrp = 1
         self.alpha1_c1_vrp = 0.8
         self.alpha2_c1_v2p = 0.2
-        self.lambda_vrp = 2
+        self.lambda_vrp = 1
+        self.volw = 1 # weight associated to the volume of the delivery
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -63,7 +64,6 @@ class HeuGroup2(Agent):
     def compute_VRP(self, deliveries_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
         for d in self.delivery:
             if d in deliveries_to_do:
-                print(f"Delivery {d} is in deliveries_to_do") #DEBUG
                 self.delivery[d]['crowdshipped'] = False
             else:
                 self.delivery[d]['crowdshipped'] = True
@@ -72,18 +72,7 @@ class HeuGroup2(Agent):
             self.delivery[d]['chosen_vrp'] = False
 
         # sort self.delivery based on their distance from the depot
-
-        # DEBUG
-        print("[DEBUG] self.delivery:")
-        print(self.delivery)
-        print("Distance matrix:")
-        print(self.distance_matrix)
         self.delivery = dict(sorted(self.delivery.items(), key=lambda x:x[1]['dist_from_depot']))
-        print("[DEBUG] self.delivery:")
-        print(self.delivery)
-        print("Distance matrix:")
-        print(self.distance_matrix)
-        print()
 
         sol = []
         for k in range(len(vehicles_dict)):
@@ -101,8 +90,8 @@ class HeuGroup2(Agent):
                     d['crowdshipped'] == False]
 
             # DEBUG
-            print(f"[DEBUG] distance from depot to 4: {self.distance_matrix[0,4]}")
-            print(f"[DEBUG] aval_d: {aval_d}")
+            #print(f"[DEBUG] distance from depot to 4: {self.distance_matrix[0,4]}")
+            #print(f"[DEBUG] aval_d: {aval_d}")
             if aval_d:
                 # add the depot as first node in the solution
                 sol[k]['path'].append(0)
@@ -170,8 +159,8 @@ class HeuGroup2(Agent):
                 # The choice is based on the cost function C2.
                 if feasible_nodes_flag:
                     # DEBUG
-                    print("[DEBUG} best_pos_all:\n\t")
-                    print(best_pos_all)
+                    #print("[DEBUG} best_pos_all:\n\t")
+                    #print(best_pos_all)
                     '''
                     k = [k for k in best_pos_all.keys()]
                     print(f"[DEBUG] id type in best_pos_all: {type(k[0])}")
@@ -189,6 +178,16 @@ class HeuGroup2(Agent):
                     
                     # 5) set the chosen_vrp of the delivery to True
                     self.delivery[best_d_id]['chosen_vrp'] = True
+
+            # DEBUG
+            if len(sol[k]['path']) > 0:
+                print(f"Vehicle n. {k}")
+                for n_ind in range(len(sol[k]['path'])):
+                    n_id = sol[k]['path'][n_ind]
+                    if n_id != 0:
+                        print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
+                        print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
+                print()
 
         return [s['path'] for s in sol]
 
@@ -242,8 +241,8 @@ class HeuGroup2(Agent):
             dist_prev_d
         
         # DEBUG
-        print(f"[DEBUG] d: {d['id']} | arr_time_d: {arr_time_d}")
-        print(f"[DEBUG] time_window_max of d: {d['time_window_max']}")
+        #print(f"[DEBUG] d: {d['id']} | arr_time_d: {arr_time_d}")
+        #print(f"[DEBUG] time_window_max of d: {d['time_window_max']}")
         
         if arr_time_d > d['time_window_max']:
             return False
@@ -265,8 +264,11 @@ class HeuGroup2(Agent):
                 if PF == 0:
                     return True
                 
+                # DEBUG
+                #if next_n_id == 41 and  sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                #    print("CACCA")
+
                 if sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
-                #elif self.delivery[next_n_id]['time_window_min'] + PF > next_n_timeupperbound:
                     return False
                 
                 # If it hasn't returned, update PF to check the next delivery in the path.
@@ -334,7 +336,7 @@ class HeuGroup2(Agent):
     def getC2(self, d, c1):
         """
         """
-        return self.lambda_vrp*d['dist_from_depot'] - c1
+        return self.lambda_vrp*d['dist_from_depot'] - c1 + self.volw*d['vol']
 
     def compareC2(self, c2_first, c2_second):
         """
@@ -351,7 +353,7 @@ class HeuGroup2(Agent):
         for d_id in best_pos_all:
             c2_d = self.getC2(self.delivery[d_id], best_pos_all[d_id][2])
 
-            print(f"[DEBUG] c2_d: {c2_d}")
+            #print(f"[DEBUG] c2_d: {c2_d}")
 
             # compare the cost c2 of the currently selected delivery "d_id"
             # with the optimum one. Update the optimum if better.
@@ -366,7 +368,7 @@ class HeuGroup2(Agent):
     def updatePath(self, sol_k, best_d_id, best_pos_all):
         """
         """
-        print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
+        #print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
         prev_n_sol = best_pos_all[best_d_id][0]
         next_n_sol = best_pos_all[best_d_id][1]
         # 1) Add the new delivery in the chosen place
