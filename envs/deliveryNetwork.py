@@ -238,7 +238,13 @@ class DeliveryNetwork():
             ('red', '--'),
             ('blue', '.'),
             ('green', '-'),
-            ('black', '.-')
+            ('black', '.-'),
+            ('yellow', '.-'),
+            ('gray', '.-'),
+            ('purple', '.-'),
+            ('darkcyan', '.-'),
+            ('plum', '.-'),
+            ('maroon', '.-')
         ]
         for k in range(self.n_vehicles):
             if len(VRP_solution[k]) == 0:

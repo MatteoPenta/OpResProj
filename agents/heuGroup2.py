@@ -10,7 +10,7 @@ class HeuGroup2(Agent):
     def __init__(self, env):
         self.name = "HeuGroup2"
         self.env = env
-        self.quantile = 0.5
+        self.quantile = 0.8 #DEBUG
         self.deliv_crowds_weights = {
             "a": 0.5,
             "b": 0.5
@@ -264,7 +264,9 @@ class HeuGroup2(Agent):
                 next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
                 if PF == 0:
                     return True
-                elif sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                
+                if sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                #elif self.delivery[next_n_id]['time_window_min'] + PF > next_n_timeupperbound:
                     return False
                 
                 # If it hasn't returned, update PF to check the next delivery in the path.
@@ -408,6 +410,7 @@ class HeuGroup2(Agent):
                     # the delay that was introduced at "next_n"
                     next_n_sol += 1
                     if next_n_sol < len(sol_k['path']):
+                        next_n_id = sol_k['path'][next_n_sol]
                         new_arr_time_next = sol_k['arrival_times'][next_n_sol] - arr_time_relative
                 else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
                     additional_delay_flag = False
