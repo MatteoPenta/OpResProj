@@ -17,8 +17,9 @@ class HeuGroup2(Agent):
         }
         # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
         self.mu_vrp = 1
-        self.alpha1_c1_vrp = 0.8
+        self.alpha1_c1_vrp = 0.7
         self.alpha2_c1_v2p = 0.2
+        self.alpha3_c1_v2p = 0
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
@@ -320,7 +321,8 @@ class HeuGroup2(Agent):
         else:
             dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
 
-        c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
+        # increment in distance, normalized
+        c11 = (dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next)/(dist_prev_d + dist_d_next)
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
                 sol_k['waiting_times'][prev_n_sol] + \
@@ -328,23 +330,26 @@ class HeuGroup2(Agent):
         waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
-        c12 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
+        c12 = (new_arr_time_next - sol_k['arrival_times'][next_n_sol])/new_arr_time_next
 
-        c1 = self.alpha1_c1_vrp*c11 + self.alpha2_c1_v2p*c12
+        c13 = (d['time_window_max'] - arr_time_d)/d['time_window_max']
+
+        c1 = self.alpha1_c1_vrp*c11 + self.alpha2_c1_v2p*c12 + self.alpha3_c1_v2p*c13
         return c1
 
     def getC2(self, d, c1):
         """
         """
-        return self.lambda_vrp*d['dist_from_depot'] - c1 + self.volw*d['vol']
+        #return self.lambda_vrp*d['dist_from_depot'] - c1 + self.volw*d['vol']
+        return c1
 
     def compareC2(self, c2_first, c2_second):
         """
         Compare two values of the cost function C2 and return True if the 
         first one is better than the second, false otherwise.
-        In this implementation, "better" means higher.
+        In this implementation, "better" means lower.
         """
-        return c2_first > c2_second
+        return c2_first < c2_second
 
     def getBestDelivery(self, sol_k, best_pos_all):
         """
