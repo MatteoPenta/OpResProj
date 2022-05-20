@@ -31,7 +31,7 @@ class ExactVRPAgent(Agent):
         threshold = np.quantile(distance_matrix[0, :], self.quantile)
         id_to_crowdship = []
         for i in range(len(distance_matrix[0, :])):
-            if distance_matrix[0, i] > threshold:
+            if distance_matrix[0, i] > +1000:
                 id_to_crowdship.append(i)
 
         return id_to_crowdship 

@@ -1,5 +1,5 @@
 {
-    "n_deliveries": 20,
+    "n_deliveries": 60,
     "n_vehicles": 4,
     "vols_vehicles": [20, 10, 10, 10],
     "costs_vehicles": [20, 10, 10, 5],
