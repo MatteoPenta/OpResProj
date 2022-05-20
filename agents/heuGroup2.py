@@ -402,9 +402,11 @@ class HeuGroup2(Agent):
 
         additional_delay_flag = True
         while additional_delay_flag and next_n_sol < len(sol_k['path']):
+            old_arr_time_next = sol_k['arrival_times'][next_n_sol]
             # Update the arrival time at next_n
             sol_k['arrival_times'][next_n_sol] = new_arr_time_next
             if next_n_sol != len(sol_k['path'])-1: # NOT the depot
+                delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[next_n_id]['time_window_min'])
                 arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
                 sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
                 if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
@@ -413,7 +415,7 @@ class HeuGroup2(Agent):
                     next_n_sol += 1
                     if next_n_sol < len(sol_k['path']):
                         next_n_id = sol_k['path'][next_n_sol]
-                        new_arr_time_next = sol_k['arrival_times'][next_n_sol] - arr_time_relative
+                        new_arr_time_next = sol_k['arrival_times'][next_n_sol] + delta_arr_time_next
                 else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
                     additional_delay_flag = False
             else:
