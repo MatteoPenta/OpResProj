@@ -22,6 +22,32 @@ class HeuGroup2(Agent):
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
+        # Repair algorithms (ALNS)
+        self.repair_algos = {
+            'greedy': {'func': self.alns_repair_greedy, 'w': 0.25},
+            'rand_vehicle': {'func': self.alns_repair_rand_vehicle, 'w': 0.25},
+            'rand_choice': {'func': self.alns_repair_rand_choice, 'w': 0.25},
+            'closest_pair': {'func': self.alns_repair_closest_pair, 'w': 0.25}
+        }
+
+        # Destroy algorithms (ALNS)
+        self.destroy_algos = {
+
+        }
+    
+    # ALNS Heuristics
+    def alns_repair_greedy(self, arg):
+        print("Greedy ALNS")
+
+    def alns_repair_rand_vehicle(self, arg):
+        print("Greedy ALNS")
+
+    def alns_repair_rand_choice(self, arg):
+        print("Greedy ALNS")
+
+    def alns_repair_closest_pair(self, arg):
+        print("Greedy ALNS")
+
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
         if len(deliveries) == 0:
@@ -188,6 +214,11 @@ class HeuGroup2(Agent):
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
                 print()
+
+        # ALNS Implementation
+        curr_sol = best_sol = sol
+
+        
 
         return [s['path'] for s in sol]
 
