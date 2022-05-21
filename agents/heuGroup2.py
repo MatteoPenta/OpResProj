@@ -22,6 +22,8 @@ class HeuGroup2(Agent):
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
+        # ALNS Parameters
+        self.alns_N_max = 100 # max number of iterations
         # Repair algorithms (ALNS)
         self.repair_algos = {
             'greedy': {'func': self.alns_repair_greedy, 'w': 0.25},
@@ -87,7 +89,17 @@ class HeuGroup2(Agent):
         
         return id_to_crowdship 
 
+
     def compute_VRP(self, deliveries_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
+        # Generate an initial feasible solution through the Solomon heuristic
+        sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
+        
+        # ALNS Implementation
+        best_sol = self.ALNS_VRP(sol)
+
+        return [s['path'] for s in best_sol]
+
+    def constructiveVRP(self, deliveries_to_do, vehicles_dict):
         for d in self.delivery:
             if d in deliveries_to_do:
                 self.delivery[d]['crowdshipped'] = False
@@ -215,13 +227,14 @@ class HeuGroup2(Agent):
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
                 print()
 
-        # ALNS Implementation
+        return sol
+
+    def ALNS_VRP(self, sol):
         curr_sol = best_sol = sol
 
-        
-
-        return [s['path'] for s in sol]
-
+        for i in range(self.alns_N_max):
+            print("DA QUI")
+    
     def nodeIsFeasibleVRP(self, d, v_vol_left):
         """
         Description
