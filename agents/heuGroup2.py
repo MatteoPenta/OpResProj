@@ -24,17 +24,31 @@ class HeuGroup2(Agent):
 
         # ALNS Parameters
         self.alns_N_max = 100 # max number of iterations
+        self.alns_N_IwI = 30 # max number of iterations without an improvement
+        self.alns_N_s = 5 # number of iterations in a segment
+        self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
+        self.alns_eps = 0.9998  # cooling rate for the temperature
+        # parameters used to increment the scores of the operators
+        self.alns_sigma1 = 20 # if the new sol is better than the best one
+        self.alns_sigma2 = 16 # if the new sol is better than the curr one
+        self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
+        self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
+
         # Repair algorithms (ALNS)
+        #   'p': probability of the algorithm
+        #   'w': weight of the algorithm
+        #   's': score of the algorithm in the current segment (used to evaluate the weight)
+        #   'n': number of times the algorithm was chosen in the current segment
         self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'w': 0.25},
-            'rand_vehicle': {'func': self.alns_repair_rand_vehicle, 'w': 0.25},
-            'rand_choice': {'func': self.alns_repair_rand_choice, 'w': 0.25},
-            'closest_pair': {'func': self.alns_repair_closest_pair, 'w': 0.25}
+            'greedy': {'func': self.alns_repair_greedy, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
+            'rand_vehicle': {'func': self.alns_repair_rand_vehicle, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
+            'rand_choice': {'func': self.alns_repair_rand_choice, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
+            'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
         }
 
         # Destroy algorithms (ALNS)
         self.destroy_algos = {
-
+            
         }
     
     # ALNS Heuristics
@@ -231,9 +245,90 @@ class HeuGroup2(Agent):
 
     def ALNS_VRP(self, sol):
         curr_sol = best_sol = sol
+        curr_sol_paths = [s['path'] for s in curr_sol]
+        best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)
+        
+        # Temperature of the solution
+        T = T_start = -self.alns_mu / np.log(0.5) 
 
-        for i in range(self.alns_N_max):
-            print("DA QUI")
+        # i: iteration counter
+        # j: counter of the iterations without an improvement
+        i = j = 0
+        while i < self.alns_N_max and j < self.alns_N_IwI:
+            # select a destroy operator d according to their weights and apply it to the solution
+            d = np.random.choice(list(self.destroy_algos.keys()), p=[self.destroy_algos[dd]['p'] for dd in self.destroy_algos])
+            self.destroy_algos[d]['n'] += 1
+            sol_minus = self.destroy_algos[d]['func'](sol)
+
+            # select a repair operator r according to their weights and apply it to the solution
+            r = np.random.choice(list(self.repair_algos.keys()), p=[self.repair_algos[rr]['p'] for rr in self.repair_algos])
+            self.repair_algos[r]['n'] += 1
+            sol_plus = self.repair_algos[r]['func'](sol_minus)
+
+            new_sol_paths = [s['path'] for s in sol_plus]
+            new_obj = self.env.evaluate_VRP(new_sol_paths)
+
+            if new_obj < curr_obj: 
+                # Improvement in the CURRENT solution
+                curr_sol = sol_plus
+                curr_obj = new_obj
+                # increment the score of the used operators by sigma2
+                self.destroy_algos[d]['s'] += self.alns_sigma2
+                self.repair_algos[r]['s'] += self.alns_sigma2
+            else:
+                # the current solution MAY be updated even though it has not improved
+                v = np.exp(-(new_obj - curr_obj)/T)
+                rn = np.random.uniform()
+                if rn < v:
+                    curr_sol = sol_plus
+                    curr_obj = new_obj
+                    # increment the score of the used operators by sigma3
+                    self.destroy_algos[d]['s'] += self.alns_sigma3
+                    self.repair_algos[r]['s'] += self.alns_sigma3
+            if new_obj < best_obj:
+                # Improvement with respect to the best solution
+                best_sol = sol_plus
+                best_obj = new_obj
+                # increment the score of the used operators by sigma1
+                self.destroy_algos[d]['s'] += self.alns_sigma1 # TODO or += self.alns_sigma1 - self.alns_sigma2 ??
+                self.repair_algos[r]['s'] += self.alns_sigma1
+                j = 0 # reset the counter of iterations without improvement
+            else:
+                j += 1
+            
+            # Update the probabilities of the operators using the adaptive weight proceudure
+            if i % self.alns_N_s == 0:
+                # Evaluate the new weights for the used operators.
+                # Then, reset their scores and number of used times.
+                for rr in self.repair_algos:
+                    if self.repair_algos[rr]['n'] > 0:
+                        self.repair_algos[rr]['w'] = (1-self.alns_rho)*self.repair_algos[rr]['w'] + \
+                            self.alns_rho*self.repair_algos[rr]['s']/self.repair_algos[rr]['n']
+
+                    self.repair_algos[rr]['n'] = 0
+                    self.repair_algos[rr]['s'] = 0
+
+                for dd in self.destroy_algos:
+                    if self.destroy_algos[dd]['n'] > 0:
+                        self.destroy_algos[dd]['w'] = (1-self.alns_rho)*self.destroy_algos[dd]['w'] + \
+                            self.alns_rho*self.destroy_algos[dd]['s']/self.destroy_algos[dd]['n']
+
+                    self.destroy_algos[dd]['n'] = 0
+                    self.destroy_algos[dd]['s'] = 0
+                
+                # Evaluate the new probabilities for the operators
+                sum_w_r = sum([self.repair_algos[tmp_r]['w'] for tmp_r in self.repair_algos])
+                for rr in self.repair_algos:
+                    self.repair_algos[rr]['p'] = self.repair_algos[rr]['w']/sum_w_r
+                sum_w_d = sum([self.destroy_algos[tmp_d]['w'] for tmp_d in self.destroy_algos])
+                for dd in self.destroy_algos:
+                    self.destroy_algos[dd]['p'] = self.destroy_algos[dd]['w']/sum_w_d
+
+            # reduce the temperature by applying the "cooling rate"
+            T = T*self.alns_eps
+            i += 1
+        
+        return best_sol
     
     def nodeIsFeasibleVRP(self, d, v_vol_left):
         """
