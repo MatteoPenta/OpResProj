@@ -40,29 +40,37 @@ class HeuGroup2(Agent):
         #   's': score of the algorithm in the current segment (used to evaluate the weight)
         #   'n': number of times the algorithm was chosen in the current segment
         self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
-            'rand_vehicle': {'func': self.alns_repair_rand_vehicle, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
-            'rand_choice': {'func': self.alns_repair_rand_choice, 'p': 0.25, 'w': 1, 's': 0, 'n': 0},
-            'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
+            'greedy': {'func': self.alns_repair_greedy, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'regret': {'func': self.alns_repair_regret, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
+            #'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
         }
 
         # Destroy algorithms (ALNS)
         self.destroy_algos = {
-            
+            'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'worst': {'func': self.alns_destroy_worst, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_destroy_random, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
         }
     
     # ALNS Heuristics
-    def alns_repair_greedy(self, arg):
+    def alns_repair_greedy(self, sol):
         print("Greedy ALNS")
 
-    def alns_repair_rand_vehicle(self, arg):
+    def alns_repair_regret(self, sol):
         print("Greedy ALNS")
 
-    def alns_repair_rand_choice(self, arg):
+    def alns_repair_random(self, sol):
         print("Greedy ALNS")
 
-    def alns_repair_closest_pair(self, arg):
-        print("Greedy ALNS")
+    def alns_destroy_shaw(self, sol):
+        print("Shaw algorithm")
+    
+    def alns_destroy_worst(self, sol):
+        print("Shaw algorithm")
+    
+    def alns_destroy_random(self, sol):
+        print("Shaw algorithm")
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -130,7 +138,7 @@ class HeuGroup2(Agent):
         for k in range(len(vehicles_dict)):
             # Initialize the solution for the k-th vehicle.
             sol.append({'path': [],'arrival_times':[], 'waiting_times': [],
-                'vol_left': vehicles_dict[k]['capacity']}) 
+                'vol_left': vehicles_dict[k]['capacity'], 'n_nodes': 0}) 
             
             # add to the solution of this vehicle the closest delivery that:
             #   - is still available 
@@ -164,6 +172,7 @@ class HeuGroup2(Agent):
                     sol[k]['arrival_times'][-1]+sol[k]['waiting_times'][-1]+sol[k]['arrival_times'][-1]
                 )
                 sol[k]['waiting_times'].append(0)
+                sol[k]['n_nodes'] += 1
 
             # the flag will be set to False and then to True again only if 
             # feasible insertions are found for any non-connected node
@@ -226,9 +235,10 @@ class HeuGroup2(Agent):
                     # 2) insert the new arrival and waiting times
                     # 3) update all the arrival & waiting times of the following deliveries
                     # 4) update the volume left in the vehicle
+                    # 5) increment the number of nodes in the vehicle
                     self.updatePath(sol[k], best_d_id, best_pos_all)
                     
-                    # 5) set the chosen_vrp of the delivery to True
+                    # 6) set the chosen_vrp of the delivery to True
                     self.delivery[best_d_id]['chosen_vrp'] = True
 
             # DEBUG
@@ -244,12 +254,13 @@ class HeuGroup2(Agent):
         return sol
 
     def ALNS_VRP(self, sol):
+        best_sol_allnodes = {} # best solution with ALL nodes connected
         curr_sol = best_sol = sol
         curr_sol_paths = [s['path'] for s in curr_sol]
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)
         
         # Temperature of the solution
-        T = T_start = -self.alns_mu / np.log(0.5) 
+        T = T_start = -self.alns_mu*curr_obj/ np.log(0.5) 
 
         # i: iteration counter
         # j: counter of the iterations without an improvement
@@ -266,6 +277,7 @@ class HeuGroup2(Agent):
             sol_plus = self.repair_algos[r]['func'](sol_minus)
 
             new_sol_paths = [s['path'] for s in sol_plus]
+            new_sol_nnodes = sum([s['n_nodes'] for s in sol_plus])
             new_obj = self.env.evaluate_VRP(new_sol_paths)
 
             if new_obj < curr_obj: 
@@ -285,13 +297,23 @@ class HeuGroup2(Agent):
                     # increment the score of the used operators by sigma3
                     self.destroy_algos[d]['s'] += self.alns_sigma3
                     self.repair_algos[r]['s'] += self.alns_sigma3
+            
+            if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
+                if not best_sol_allnodes: # still not have a best solution with all nodes
+                    best_sol_allnodes = sol_plus
+                    best_sol_allnodes_obj = new_obj
+                elif new_obj < best_sol_allnodes_obj:
+                    # The new solution connects all nodes and is better than the best solution with all nodes
+                    best_sol_allnodes = sol_plus
+                    best_sol_allnodes_obj = new_obj
+
+            # Improvement with respect to the best solution
             if new_obj < best_obj:
-                # Improvement with respect to the best solution
                 best_sol = sol_plus
                 best_obj = new_obj
                 # increment the score of the used operators by sigma1
-                self.destroy_algos[d]['s'] += self.alns_sigma1 # TODO or += self.alns_sigma1 - self.alns_sigma2 ??
-                self.repair_algos[r]['s'] += self.alns_sigma1
+                self.destroy_algos[d]['s'] += self.alns_sigma1 - self.alns_sigma2
+                self.repair_algos[r]['s'] += self.alns_sigma1 - self.alns_sigma2
                 j = 0 # reset the counter of iterations without improvement
             else:
                 j += 1
@@ -561,6 +583,8 @@ class HeuGroup2(Agent):
         
         # 4) update the volume left in the vehicle
         sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
+        # 5) increment the number of nodes in the vehicle
+        sol_k['n_nodes'] += 1
 
     def learn_and_save(self):
         time.sleep(7)
