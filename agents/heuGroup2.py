@@ -503,7 +503,6 @@ class HeuGroup2(Agent):
 
         return best_d[0] # return the id of the delivery with optimum c2
 
-
     def updatePath(self, sol_k, best_d_id, best_pos_all):
         """
         """
@@ -562,7 +561,6 @@ class HeuGroup2(Agent):
         
         # 4) update the volume left in the vehicle
         sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
-
 
     def learn_and_save(self):
         time.sleep(7)
