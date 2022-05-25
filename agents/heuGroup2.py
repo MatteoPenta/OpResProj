@@ -54,8 +54,72 @@ class HeuGroup2(Agent):
         }
     
     # ALNS Heuristics
-    def alns_repair_greedy(self, sol):
-        print("Greedy ALNS")
+    def alns_repair_greedy(self, sol): 
+        # 1) For each vehicle, find the best node (in terms of c2) to insert in the best position (in terms of c1)
+        best_pos_ve = []
+        for k in range(len(sol)):
+            # best node in terms of c2 for vehicle k. Key: node id, Value: best_pos_d of that node (see below)
+            best_pos_k = {} 
+            for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
+                # find the best position where to insert node d in vehicle k
+                # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>,<c2>]
+                best_pos_d = []
+                for i in range(len(sol[k]['path'])-1):
+                    prev_n = i
+                    next_n = i+1
+                    # Check time feasibility considering this insertion
+                    if self.nodeTimeFeasibleVRP(sol[k], prev_n, d, next_n):
+                        c1 = self.getC1(sol[k], prev_n, d, next_n)
+                        if not best_pos_d: # first time
+                            best_pos_d = [prev_n, next_n, c1]
+                        elif c1 < best_pos_d[2]:
+                            best_pos_d = [prev_n, next_n, c1]
+                if best_pos_d: # if a best placing was found, add it to "best_pos_all"
+                    if not best_pos_k:
+                        c2_new = self.getC2(d, best_pos_d[2])
+                        best_pos_d.append(c2_new)
+                        best_pos_k = {d['id']: best_pos_d}
+                    else:
+                        c2_new = self.getC2(d, best_pos_d[2])
+                        if self.compareC2(c2_new, best_pos_k[3]):
+                            best_pos_d.append(c2_new)
+                            best_pos_k = {d['id']: best_pos_d}
+                elif sol[k]['n_nodes'] == 0:
+                    # empty vehicle: nodes are evaluated on the base of their distance from the depot
+                    # (it corresponds to their value of c2). In this case, however, nodes closer to 
+                    # the depot will be preferred
+                    if not best_pos_k:
+                        c2_new = d['dist_from_depot']
+                        best_pos_k = {d['id']: [0,1,0,c2_new]} # [<prev_ind>,<next_ind>,<c1>,<c2>]
+                    else:
+                        c2_new = d['dist_from_depot']
+                        if c2_new < best_pos_k[3]:
+                            best_pos_k = {d['id']: [0,1,0,c2_new]}
+
+            if best_pos_k:
+                best_pos_ve.append(best_pos_k)
+
+        # 2) While there are still vehicles with a best insertion available:
+        #       - Find the vehicle whose insertion has the best cost (in terms of c3)
+        #       - Perform the insertion
+        #       - Update the best insertion of all vehicles whose best insertion was the inserted node
+        
+        # while best_pos_ve: 
+            #best_c3 = 
+            #for v in best_pos_ve:
+                
+        '''
+        feasible_nodes_flag = True
+        while(feasible_nodes_flag):
+            feasible_nodes_flag = False
+
+            if feasible_nodes_flag:
+                best_d_id = self.getBestDelivery(sol[k], best_pos_all)
+                self.insertNode(sol[k], best_d_id, best_pos_all)
+                self.delivery[best_d_id]['chosen_vrp'] = True
+        '''
+        
+        return sol
 
     def alns_repair_regret(self, sol):
         print("Greedy ALNS")
@@ -70,7 +134,10 @@ class HeuGroup2(Agent):
         print("Shaw algorithm")
     
     def alns_destroy_random(self, sol):
-        print("Shaw algorithm")
+        # pick a random vehicle
+        v = np.random.randint(0,len(sol))
+        # pick a random node in the path of the picked vehicle, excluding the depot (first and last elements)
+        n = np.random.randint(1,len(sol[v]['path'])-1)
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -123,13 +190,11 @@ class HeuGroup2(Agent):
 
     def constructiveVRP(self, deliveries_to_do, vehicles_dict):
         for d in self.delivery:
+            self.delivery[d]['chosen_vrp'] = False
             if d in deliveries_to_do:
                 self.delivery[d]['crowdshipped'] = False
             else:
                 self.delivery[d]['crowdshipped'] = True
-
-        for d in self.delivery:
-            self.delivery[d]['chosen_vrp'] = False
 
         # sort self.delivery based on their distance from the depot
         self.delivery = dict(sorted(self.delivery.items(), key=lambda x:x[1]['dist_from_depot']))
@@ -219,27 +284,14 @@ class HeuGroup2(Agent):
                 # will be included in the path of the k-th vehicle. 
                 # The choice is based on the cost function C2.
                 if feasible_nodes_flag:
-                    # DEBUG
-                    #print("[DEBUG} best_pos_all:\n\t")
-                    #print(best_pos_all)
-                    '''
-                    k = [k for k in best_pos_all.keys()]
-                    print(f"[DEBUG] id type in best_pos_all: {type(k[0])}")
-                    '''
-
                     best_d_id = self.getBestDelivery(sol[k], best_pos_all)
-                    # DEBUG
-                    #print(f"[DEBUG] best_d_id: {best_d_id}")
 
                     # 1) Add the new delivery before the depot at the end of the path
                     # 2) insert the new arrival and waiting times
                     # 3) update all the arrival & waiting times of the following deliveries
                     # 4) update the volume left in the vehicle
                     # 5) increment the number of nodes in the vehicle
-                    self.updatePath(sol[k], best_d_id, best_pos_all)
-                    
-                    # 6) set the chosen_vrp of the delivery to True
-                    self.delivery[best_d_id]['chosen_vrp'] = True
+                    self.insertNode(sol[k], best_d_id, best_pos_all[best_d_id][0], best_pos_all[best_d_id][1])
 
             # DEBUG
             if len(sol[k]['path']) > 0:
@@ -525,12 +577,10 @@ class HeuGroup2(Agent):
 
         return best_d[0] # return the id of the delivery with optimum c2
 
-    def updatePath(self, sol_k, best_d_id, best_pos_all):
+    def insertNode(self, sol_k, best_d_id, prev_n_sol, next_n_sol):
         """
         """
         #print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
-        prev_n_sol = best_pos_all[best_d_id][0]
-        next_n_sol = best_pos_all[best_d_id][1]
         # 1) Add the new delivery in the chosen place
         sol_k['path'].insert(prev_n_sol+1, best_d_id)
         # update the index of next_n
@@ -585,6 +635,12 @@ class HeuGroup2(Agent):
         sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
         # 5) increment the number of nodes in the vehicle
         sol_k['n_nodes'] += 1
+        # 6) set the chosen_vrp of the delivery to True
+        self.delivery[best_d_id]['chosen_vrp'] = True
+
+    def removeNode(self, sol_k, n_id, prev_n_sol, next_n_sol):
+        # remove the node and update the times...
+        print("Ciao")
 
     def learn_and_save(self):
         time.sleep(7)
