@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import time
 from turtle import distance
+
+from sympy import solve_linear
 from agents import *
 from scipy import spatial
 import numpy as np
@@ -56,13 +58,16 @@ class HeuGroup2(Agent):
     # ALNS Heuristics
     def alns_repair_greedy(self, sol): 
         # 1) For each vehicle, find the best node (in terms of c2) to insert in the best position (in terms of c1)
-        best_pos_ve = []
+        # Format used:
+        #   best_pos_ve = {<vehicle_index>: [<best_pos_k of that vehicle>]}
+        best_pos_ve = {}
         for k in range(len(sol)):
-            # best node in terms of c2 for vehicle k. Key: node id, Value: best_pos_d of that node (see below)
+            # best node in terms of c2 for vehicle k. 
+            # Format: best_pos_k = [<prev_n>,<next_n>,<c1>,<c2>,<node_id>]
             best_pos_k = {} 
             for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
                 # find the best position where to insert node d in vehicle k
-                # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>,<c2>]
+                # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>]
                 best_pos_d = []
                 for i in range(len(sol[k]['path'])-1):
                     prev_n = i
@@ -78,36 +83,56 @@ class HeuGroup2(Agent):
                     if not best_pos_k:
                         c2_new = self.getC2(d, best_pos_d[2])
                         best_pos_d.append(c2_new)
-                        best_pos_k = {d['id']: best_pos_d}
+                        best_pos_d.append(d['id'])
+                        best_pos_k = best_pos_d
                     else:
                         c2_new = self.getC2(d, best_pos_d[2])
                         if self.compareC2(c2_new, best_pos_k[3]):
                             best_pos_d.append(c2_new)
-                            best_pos_k = {d['id']: best_pos_d}
-                elif sol[k]['n_nodes'] == 0:
-                    # empty vehicle: nodes are evaluated on the base of their distance from the depot
-                    # (it corresponds to their value of c2). In this case, however, nodes closer to 
-                    # the depot will be preferred
-                    if not best_pos_k:
-                        c2_new = d['dist_from_depot']
-                        best_pos_k = {d['id']: [0,1,0,c2_new]} # [<prev_ind>,<next_ind>,<c1>,<c2>]
-                    else:
-                        c2_new = d['dist_from_depot']
-                        if c2_new < best_pos_k[3]:
-                            best_pos_k = {d['id']: [0,1,0,c2_new]}
+                            best_pos_d.append(d['id'])
+                            best_pos_k = best_pos_d
+                else:
+                    if sol[k]['n_nodes'] == 0:
+                        # empty vehicle: nodes are evaluated on the base of their distance from the depot
+                        # (it corresponds to their value of c2). In this case, however, nodes closer to 
+                        # the depot will be preferred
+                        # check time feasibility 
+                        if d['dist_from_depot'] < d['time_window_max']:
+                            #TODO FIX DISTANCE ASIMMETRY
+                            c1_new = self.getC1(sol[k], 0, d, 0)
+                            c2_new = d['dist_from_depot']
+                            if not best_pos_k:
+                                best_pos_k = [0,1,c1_new,c2_new,d['id']]
+                            else:
+                                if c2_new < best_pos_k[3]:
+                                    best_pos_k = [0,1,c1_new,c2_new,d['id']]
 
             if best_pos_k:
-                best_pos_ve.append(best_pos_k)
+                best_pos_ve[k] = best_pos_k
 
         # 2) While there are still vehicles with a best insertion available:
         #       - Find the vehicle whose insertion has the best cost (in terms of c3)
         #       - Perform the insertion
         #       - Update the best insertion of all vehicles whose best insertion was the inserted node
         
-        # while best_pos_ve: 
-            #best_c3 = 
-            #for v in best_pos_ve:
-                
+        while best_pos_ve: 
+            # List that will contain the best vehicle in terms of the c3 cost function, defined as:
+            #   c3(v) = c1(best_node(v)) + (volume of best_node(v))/(sum of volumes of all nodes in v)
+            # The format used is: 
+            #   best_ve_c3 = [<index of the vehicle in best_pos_ve>, <value of c3 for that vehicle>]
+            # Note that "best" for the c3 cost function means MINIMUM.
+            best_ve_c3 = []
+            for v in best_pos_ve:
+                c3 = self.getC3(sol[v], best_pos_ve[v])
+                if not best_ve_c3:
+                    best_ve_c3 = [v, c3]
+                else:
+                    if c3 < best_ve_c3[1]:
+                        best_ve_c3 = [v, c3]
+            
+            # Perform the insertion
+            # ...
+
         '''
         feasible_nodes_flag = True
         while(feasible_nodes_flag):
@@ -194,7 +219,9 @@ class HeuGroup2(Agent):
         sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
         
         # ALNS Implementation
-        best_sol = self.ALNS_VRP(sol)
+        # Returns the best solution overall in terms of objetive function and the best function found which
+        # also includes all deliveries.
+        best_sol, best_sol_allnodes = self.ALNS_VRP(sol)
 
         return [s['path'] for s in best_sol]
 
@@ -228,6 +255,10 @@ class HeuGroup2(Agent):
             #print(f"[DEBUG] distance from depot to 4: {self.distance_matrix[0,4]}")
             #print(f"[DEBUG] aval_d: {aval_d}")
             if aval_d:
+                #TODO We could use the new insertNode() function
+                # directly here to add the first node. It would
+                # handle everything itself.
+
                 # add the depot as first node in the solution
                 sol[k]['path'].append(0)
                 sol[k]['arrival_times'].append(0)
@@ -316,7 +347,7 @@ class HeuGroup2(Agent):
         return sol
 
     def ALNS_VRP(self, sol):
-        best_sol_allnodes = {} # best solution with ALL nodes connected
+        best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
         curr_sol = best_sol = sol
         curr_sol_paths = [s['path'] for s in curr_sol]
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)
@@ -412,7 +443,7 @@ class HeuGroup2(Agent):
             T = T*self.alns_eps
             i += 1
         
-        return best_sol
+        return best_sol, best_sol_allnodes
     
     def nodeIsFeasibleVRP(self, d, v_vol_left):
         """
@@ -589,8 +620,21 @@ class HeuGroup2(Agent):
 
     def insertNode(self, sol_k, best_d_id, prev_n_sol, next_n_sol):
         """
+        Insert a delivery in a vehicle's solution at a specific position with its arrival
+        and waiting times and update the time info of the following deliveries if needed.
         """
-        #print(f"[DEBUG] best_d_id: {best_d_id}") #DEBUG
+
+        # Check if the insertion is being made in an empty vehicle:
+        # in that case, insert the depot as first and last element of the 
+        # path first
+        if sol_k['n_nodes'] == 0:
+            sol_k['path'].append(0)
+            sol_k['arrival_times'].append(0)
+            sol_k['waiting_times'].append(0)
+            sol_k['path'].append(0)
+            sol_k['arrival_times'].append(0)
+            sol_k['waiting_times'].append(0)
+
         # 1) Add the new delivery in the chosen place
         sol_k['path'].insert(prev_n_sol+1, best_d_id)
         # update the index of next_n
