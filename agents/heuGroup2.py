@@ -639,8 +639,55 @@ class HeuGroup2(Agent):
         self.delivery[best_d_id]['chosen_vrp'] = True
 
     def removeNode(self, sol_k, n_id, prev_n_sol, next_n_sol):
-        # remove the node and update the times...
-        print("Ciao")
+        # remove the delivery from the solution
+        sol_k['path'].remove(n_id)
+        sol_k['arrival_times'].pop(prev_n_sol+1)
+        sol_k['waiting_times'].pop(prev_n_sol+1)
+        next_n_sol -= 1
+
+        # update the arrival & waiting times of the following deliveries
+        prev_n_id = sol_k['path'][prev_n_sol]
+        next_n_id = sol_k['path'][next_n_sol]
+        if prev_n_id == 0:
+            prev_n_index = 0
+        else:
+            prev_n_index = self.delivery[prev_n_id]['index']
+        if next_n_id == 0:
+            next_n_index = 0
+        else:
+            next_n_index = self.delivery[next_n_id]['index']
+        dist_prev_next = self.distance_matrix[prev_n_index,next_n_index]
+        new_arr_time_next = sol_k['arrival_times'][prev_n_sol] + sol_k['waiting_times'][prev_n_sol] \
+            + dist_prev_next
+
+        update_flag = True
+        while update_flag and next_n_sol < len(sol_k['path']):
+            old_arr_time_next = sol_k['arrival_times'][next_n_sol]
+            # Update the arrival time at next_n
+            sol_k['arrival_times'][next_n_sol] = new_arr_time_next
+            if next_n_sol != len(sol_k['path'])-1: # NOT the depot
+                # difference in the arrival time at the FOLLOWING node w.r.t. next_n
+                delta_arr_time_next = old_arr_time_next - max(self.delivery[next_n_id]['time_window_min'], new_arr_time_next)
+                sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[next_n_id]['time_window_min'] - new_arr_time_next)
+                if old_arr_time_next > self.delivery[next_n_id]['time_window_min']: 
+                    # the following deliveries have to be updated
+                    next_n_sol +=1
+                    if next_n_sol < len(sol_k['path']):
+                        next_n_id = sol_k['path'][next_n_sol]
+                        new_arr_time_next = sol_k['arrival_times'][next_n_sol] - delta_arr_time_next
+                else:
+                    update_flag = False
+            else:
+                next_n_sol += 1
+
+        # update the volume left in the vehicle
+        sol_k['vol_left'] += self.delivery[n_id]['vol']
+        # decrement the number of nodes in the vehicle
+        sol_k['n_nodes'] -= 1
+        # set the chosen_vrp of the delivery to False
+        self.delivery[n_id]['chosen_vrp'] = False
+
+
 
     def learn_and_save(self):
         time.sleep(7)
