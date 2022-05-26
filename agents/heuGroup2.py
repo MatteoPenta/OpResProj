@@ -133,11 +133,21 @@ class HeuGroup2(Agent):
     def alns_destroy_worst(self, sol):
         print("Shaw algorithm")
     
-    def alns_destroy_random(self, sol):
-        # pick a random vehicle
-        v = np.random.randint(0,len(sol))
-        # pick a random node in the path of the picked vehicle, excluding the depot (first and last elements)
-        n = np.random.randint(1,len(sol[v]['path'])-1)
+    def alns_destroy_random(self, sol, q):
+        '''
+        Remove q random nodes from the solution
+        '''
+        for i in range(q):
+            # pick a random vehicle
+            v = np.random.randint(0,len(sol))
+            # pick a random node in the path of the picked vehicle, excluding the depot (first and last elements)
+            if len(sol[v]['path']) > 0:
+                n = np.random.randint(1,len(sol[v]['path'])-1) 
+                self.removeNode(sol[v], sol[v]['path'][n], n-1, n+1)
+            else:
+                i -= 1 # repeat the iteration if an empty vehicle was picked
+        
+        return sol
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
