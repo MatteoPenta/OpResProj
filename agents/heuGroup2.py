@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import copy
 from turtle import distance
 
 from sympy import solve_linear
@@ -25,9 +26,9 @@ class HeuGroup2(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 100 # max number of iterations
-        self.alns_N_IwI = 30 # max number of iterations without an improvement
-        self.alns_N_s = 5 # number of iterations in a segment
+        self.alns_N_max = 10000 # max number of iterations
+        self.alns_N_IwI = 3000 # max number of iterations without an improvement
+        self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
         # parameters used to increment the scores of the operators
@@ -42,17 +43,17 @@ class HeuGroup2(Agent):
         #   's': score of the algorithm in the current segment (used to evaluate the weight)
         #   'n': number of times the algorithm was chosen in the current segment
         self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'regret': {'func': self.alns_repair_regret, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
+            'greedy': {'func': self.alns_repair_greedy, 'p': 1, 'w': 1, 's': 0, 'n': 0}
+            #'regret': {'func': self.alns_repair_regret, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
             #'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
         }
 
         # Destroy algorithms (ALNS)
         self.destroy_algos = {
-            'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'worst': {'func': self.alns_destroy_worst, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'random': {'func': self.alns_destroy_random, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
+            #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            #'worst': {'func': self.alns_destroy_worst, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_destroy_random, 'p': 1, 'w': 1, 's': 0, 'n': 0}
         }
     
     # ALNS Heuristics
@@ -63,7 +64,9 @@ class HeuGroup2(Agent):
         best_pos_ve = {}
         # Define the maximum distance from depot considering the nodes that are still not in a solution
         # It will be needed to normalize the c1 coefficient when we are inserting a node in an empty vehicle
-        max_dist_depot = max([d['dist_from_depot'] for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False])
+        avail_nodes = [d['dist_from_depot'] for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False]
+        if avail_nodes:
+            max_dist_depot = max(avail_nodes)
 
         for k in range(len(sol)):
             # best node in terms of c2 for vehicle k. 
@@ -142,57 +145,61 @@ class HeuGroup2(Agent):
 
             # Repeat the same procedure done before, but this time only for those vehicles 
             # whose best node was the same that we inserted in the last line of code
-            max_dist_depot = max([d['dist_from_depot'] for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False])
+            avail_nodes = [d['dist_from_depot'] for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False]
+            if avail_nodes:
+                max_dist_depot = max(avail_nodes)
             for k in range(len(sol)):
-                if (best_pos_ve[k][4] == new_id):
-                    best_pos_ve.pop(k)
-                    # best node in terms of c2 for vehicle k. 
-                    # Format: best_pos_k = [<prev_n>,<next_n>,<c1>,<c2>,<node_id>]
-                    best_pos_k = [] 
-                    for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
-                        # find the best position where to insert node d in vehicle k
-                        # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>]
-                        best_pos_d = []
-                        for i in range(len(sol[k]['path'])-1):
-                            prev_n = i
-                            next_n = i+1
-                            # Check time feasibility considering this insertion
-                            if self.nodeTimeFeasibleVRP(sol[k], prev_n, d, next_n):
-                                c1 = self.getC1(sol[k], prev_n, d, next_n)
-                                if not best_pos_d: # first time
-                                    best_pos_d = [prev_n, next_n, c1]
-                                elif c1 < best_pos_d[2]:
-                                    best_pos_d = [prev_n, next_n, c1]
-                        if best_pos_d: # if a best placing was found, add it to "best_pos_all"
-                            if not best_pos_k:
-                                c2_new = self.getC2(d, best_pos_d[2])
-                                best_pos_d.append(c2_new)
-                                best_pos_d.append(d['id'])
-                                best_pos_k = best_pos_d
-                            else:
-                                c2_new = self.getC2(d, best_pos_d[2])
-                                if self.compareC2(c2_new, best_pos_k[3]):
+                if k in best_pos_ve:
+                    if best_pos_ve[k][4] == new_id:
+                        best_pos_ve.pop(k)
+                        # best node in terms of c2 for vehicle k. 
+                        # Format: best_pos_k = [<prev_n>,<next_n>,<c1>,<c2>,<node_id>]
+                        best_pos_k = [] 
+                        for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
+                            # find the best position where to insert node d in vehicle k
+                            # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>]
+                            best_pos_d = []
+                            for i in range(len(sol[k]['path'])-1):
+                                prev_n = i
+                                next_n = i+1
+                                # Check time feasibility considering this insertion
+                                if self.nodeTimeFeasibleVRP(sol[k], prev_n, d, next_n):
+                                    c1 = self.getC1(sol[k], prev_n, d, next_n)
+                                    if not best_pos_d: # first time
+                                        best_pos_d = [prev_n, next_n, c1]
+                                    elif c1 < best_pos_d[2]:
+                                        best_pos_d = [prev_n, next_n, c1]
+                            if best_pos_d: # if a best placing was found, add it to "best_pos_all"
+                                if not best_pos_k:
+                                    c2_new = self.getC2(d, best_pos_d[2])
                                     best_pos_d.append(c2_new)
                                     best_pos_d.append(d['id'])
                                     best_pos_k = best_pos_d
-                        else:
-                            if sol[k]['n_nodes'] == 0:
-                                # empty vehicle: nodes are evaluated on the base of their distance from the depot
-                                # (it corresponds to their value of c2). In this case, however, nodes closer to 
-                                # the depot will be preferred.
-                                # Check time feasibility first.
-                                if d['dist_from_depot'] < d['time_window_max']:
-                                    #TODO FIX DISTANCE ASIMMETRY
-                                    c1_new = 2 * d['dist_from_depot'] / max_dist_depot
-                                    c2_new = d['dist_from_depot']
-                                    if not best_pos_k:
-                                        best_pos_k = [0,1,c1_new,c2_new,d['id']]
-                                    else:
-                                        if c2_new < best_pos_k[3]:
+                                else:
+                                    c2_new = self.getC2(d, best_pos_d[2])
+                                    if self.compareC2(c2_new, best_pos_k[3]):
+                                        best_pos_d.append(c2_new)
+                                        best_pos_d.append(d['id'])
+                                        best_pos_k = best_pos_d
+                            else:
+                                if sol[k]['n_nodes'] == 0:
+                                    # empty vehicle: nodes are evaluated on the base of their distance from the depot
+                                    # (it corresponds to their value of c2). In this case, however, nodes closer to 
+                                    # the depot will be preferred.
+                                    # Check time feasibility first.
+                                    if d['dist_from_depot'] < d['time_window_max']:
+                                        #TODO FIX DISTANCE ASIMMETRY
+                                        c1_new = 2 * d['dist_from_depot'] / max_dist_depot
+                                        c2_new = d['dist_from_depot']
+                                        if not best_pos_k:
                                             best_pos_k = [0,1,c1_new,c2_new,d['id']]
+                                        else:
+                                            if c2_new < best_pos_k[3]:
+                                                best_pos_k = [0,1,c1_new,c2_new,d['id']]
 
-                    if best_pos_k:
-                        best_pos_ve[k] = best_pos_k
+                        if best_pos_k:
+                            best_pos_ve[k] = best_pos_k
+        return sol
         
 
     def alns_repair_regret(self, sol):
@@ -207,10 +214,11 @@ class HeuGroup2(Agent):
     def alns_destroy_worst(self, sol):
         print("Shaw algorithm")
     
-    def alns_destroy_random(self, sol, q):
+    def alns_destroy_random(self, sol):
         '''
         Remove q random nodes from the solution
         '''
+        q = max(1,min(int(self.env.n_deliveries / 10), 25))
         for i in range(q):
             # pick a random vehicle
             v = np.random.randint(0,len(sol))
@@ -220,6 +228,7 @@ class HeuGroup2(Agent):
                 self.removeNode(sol[v], sol[v]['path'][n], n-1, n+1)
             else:
                 i -= 1 # repeat the iteration if an empty vehicle was picked
+        return sol
 
     def compute_delivery_to_crowdship(self, deliveries):
         # 1) evaluate the score for all deliveries
@@ -269,6 +278,9 @@ class HeuGroup2(Agent):
         # Returns the best solution overall in terms of objetive function and the best function found which
         # also includes all deliveries.
         best_sol, best_sol_allnodes = self.ALNS_VRP(sol)
+
+        # DEBUG
+        print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
 
         return [s['path'] for s in best_sol]
 
@@ -396,7 +408,8 @@ class HeuGroup2(Agent):
 
     def ALNS_VRP(self, sol):
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
-        curr_sol = best_sol = sol
+        curr_sol = sol
+        best_sol = copy.deepcopy(sol)
         curr_sol_paths = [s['path'] for s in curr_sol]
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)
         
@@ -410,7 +423,7 @@ class HeuGroup2(Agent):
             # select a destroy operator d according to their weights and apply it to the solution
             d = np.random.choice(list(self.destroy_algos.keys()), p=[self.destroy_algos[dd]['p'] for dd in self.destroy_algos])
             self.destroy_algos[d]['n'] += 1
-            sol_minus = self.destroy_algos[d]['func'](sol)
+            sol_minus = self.destroy_algos[d]['func'](copy.deepcopy(curr_sol))
 
             # select a repair operator r according to their weights and apply it to the solution
             r = np.random.choice(list(self.repair_algos.keys()), p=[self.repair_algos[rr]['p'] for rr in self.repair_algos])
@@ -423,7 +436,7 @@ class HeuGroup2(Agent):
 
             if new_obj < curr_obj: 
                 # Improvement in the CURRENT solution
-                curr_sol = sol_plus
+                curr_sol = copy.deepcopy(sol_plus)
                 curr_obj = new_obj
                 # increment the score of the used operators by sigma2
                 self.destroy_algos[d]['s'] += self.alns_sigma2
@@ -433,7 +446,7 @@ class HeuGroup2(Agent):
                 v = np.exp(-(new_obj - curr_obj)/T)
                 rn = np.random.uniform()
                 if rn < v:
-                    curr_sol = sol_plus
+                    curr_sol = copy.deepcopy(sol_plus)
                     curr_obj = new_obj
                     # increment the score of the used operators by sigma3
                     self.destroy_algos[d]['s'] += self.alns_sigma3
@@ -441,16 +454,16 @@ class HeuGroup2(Agent):
             
             if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
                 if not best_sol_allnodes: # still not have a best solution with all nodes
-                    best_sol_allnodes = sol_plus
+                    best_sol_allnodes = copy.deepcopy(sol_plus)
                     best_sol_allnodes_obj = new_obj
                 elif new_obj < best_sol_allnodes_obj:
                     # The new solution connects all nodes and is better than the best solution with all nodes
-                    best_sol_allnodes = sol_plus
+                    best_sol_allnodes = copy.deepcopy(sol_plus)
                     best_sol_allnodes_obj = new_obj
 
             # Improvement with respect to the best solution
             if new_obj < best_obj:
-                best_sol = sol_plus
+                best_sol = copy.deepcopy(sol_plus)
                 best_obj = new_obj
                 # increment the score of the used operators by sigma1
                 self.destroy_algos[d]['s'] += self.alns_sigma1 - self.alns_sigma2
@@ -460,7 +473,7 @@ class HeuGroup2(Agent):
                 j += 1
             
             # Update the probabilities of the operators using the adaptive weight proceudure
-            if i % self.alns_N_s == 0:
+            if i != 0 and i % self.alns_N_s == 0:
                 # Evaluate the new weights for the used operators.
                 # Then, reset their scores and number of used times.
                 for rr in self.repair_algos:
@@ -604,23 +617,19 @@ class HeuGroup2(Agent):
 
         prev_n_id = sol_k['path'][prev_n_sol]
         if prev_n_id == 0: # depot (first element in the path)
-            dist_prev_d = d['dist_from_depot']
+            prev_n_index = 0
         else:
             prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-            dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
 
         next_n_id = sol_k['path'][next_n_sol]
         if next_n_id == 0: # depot (last element in the path)
             next_n_index = 0
-            dist_d_next = d['dist_from_depot']
         else:
             next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-            dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
-
-        if prev_n_id == 0:
-            dist_prev_next = self.delivery[next_n_id]['dist_from_depot']
-        else:
-            dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
+        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+        
+        dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
 
         c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
         c11 = c11 / (dist_prev_d + dist_d_next) # normalize c11
@@ -652,7 +661,7 @@ class HeuGroup2(Agent):
         vol_new_n = self.delivery[new_n_id]['vol']
         sum_prev_nodes = sol_k['init_vol'] - sol_k['vol_left']
 
-        return c1 + vol_new_n / sum_prev_nodes
+        return c1 + vol_new_n / (sum_prev_nodes + vol_new_n)
 
     def compareC2(self, c2_first, c2_second):
         """
@@ -705,10 +714,10 @@ class HeuGroup2(Agent):
         # 2) insert the new arrival and waiting times
         prev_n_id = sol_k['path'][prev_n_sol]
         if prev_n_id == 0: # depot (first element in the path)
-            dist_prev_d = self.delivery[best_d_id]['dist_from_depot']
+            prev_n_index = 0
         else:
             prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-            dist_prev_d = self.distance_matrix[prev_n_index, self.delivery[best_d_id]['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_index, self.delivery[best_d_id]['index']] # distance between prev_n and d
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
                 dist_prev_d
@@ -720,10 +729,10 @@ class HeuGroup2(Agent):
         # 3) update all the arrival & waiting times of the following deliveries
         next_n_id = sol_k['path'][next_n_sol]
         if next_n_id == 0: # depot (last element in the path)
-            dist_d_next = self.delivery[best_d_id]['dist_from_depot']
+            next_n_index = 0
         else:
             next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-            dist_d_next = self.distance_matrix[self.delivery[best_d_id]['index'], next_n_index] # distance between d and next_n
+        dist_d_next = self.distance_matrix[self.delivery[best_d_id]['index'], next_n_index] # distance between d and next_n
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
         additional_delay_flag = True
@@ -732,6 +741,9 @@ class HeuGroup2(Agent):
             # Update the arrival time at next_n
             sol_k['arrival_times'][next_n_sol] = new_arr_time_next
             if next_n_sol != len(sol_k['path'])-1: # NOT the depot
+                # DEBUG
+                if next_n_id == 0:
+                    print("DEBUG")
                 delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[next_n_id]['time_window_min'])
                 arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
                 sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
@@ -760,46 +772,51 @@ class HeuGroup2(Agent):
         sol_k['arrival_times'].pop(prev_n_sol+1)
         sol_k['waiting_times'].pop(prev_n_sol+1)
         next_n_sol -= 1
+        # decrement the number of nodes in the vehicle
+        sol_k['n_nodes'] -= 1
 
-        # update the arrival & waiting times of the following deliveries
-        prev_n_id = sol_k['path'][prev_n_sol]
-        next_n_id = sol_k['path'][next_n_sol]
-        if prev_n_id == 0:
-            prev_n_index = 0
-        else:
-            prev_n_index = self.delivery[prev_n_id]['index']
-        if next_n_id == 0:
-            next_n_index = 0
-        else:
-            next_n_index = self.delivery[next_n_id]['index']
-        dist_prev_next = self.distance_matrix[prev_n_index,next_n_index]
-        new_arr_time_next = sol_k['arrival_times'][prev_n_sol] + sol_k['waiting_times'][prev_n_sol] \
-            + dist_prev_next
-
-        update_flag = True
-        while update_flag and next_n_sol < len(sol_k['path']):
-            old_arr_time_next = sol_k['arrival_times'][next_n_sol]
-            # Update the arrival time at next_n
-            sol_k['arrival_times'][next_n_sol] = new_arr_time_next
-            if next_n_sol != len(sol_k['path'])-1: # NOT the depot
-                # difference in the arrival time at the FOLLOWING node w.r.t. next_n
-                delta_arr_time_next = old_arr_time_next - max(self.delivery[next_n_id]['time_window_min'], new_arr_time_next)
-                sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[next_n_id]['time_window_min'] - new_arr_time_next)
-                if old_arr_time_next > self.delivery[next_n_id]['time_window_min']: 
-                    # the following deliveries have to be updated
-                    next_n_sol +=1
-                    if next_n_sol < len(sol_k['path']):
-                        next_n_id = sol_k['path'][next_n_sol]
-                        new_arr_time_next = sol_k['arrival_times'][next_n_sol] - delta_arr_time_next
-                else:
-                    update_flag = False
+        if sol_k['n_nodes'] == 0: # removed the only node in the path
+            sol_k['path'] = []
+            sol_k['arrival_times'] = []
+            sol_k['waiting_times'] = []
+        else: 
+            # update the arrival & waiting times of the following deliveries
+            prev_n_id = sol_k['path'][prev_n_sol]
+            next_n_id = sol_k['path'][next_n_sol]
+            if prev_n_id == 0:
+                prev_n_index = 0
             else:
-                next_n_sol += 1
+                prev_n_index = self.delivery[prev_n_id]['index']
+            if next_n_id == 0:
+                next_n_index = 0
+            else:
+                next_n_index = self.delivery[next_n_id]['index']
+            dist_prev_next = self.distance_matrix[prev_n_index,next_n_index]
+            new_arr_time_next = sol_k['arrival_times'][prev_n_sol] + sol_k['waiting_times'][prev_n_sol] \
+                + dist_prev_next
+
+            update_flag = True
+            while update_flag and next_n_sol < len(sol_k['path']):
+                old_arr_time_next = sol_k['arrival_times'][next_n_sol]
+                # Update the arrival time at next_n
+                sol_k['arrival_times'][next_n_sol] = new_arr_time_next
+                if next_n_sol != len(sol_k['path'])-1: # NOT the depot
+                    # difference in the arrival time at the FOLLOWING node w.r.t. next_n
+                    delta_arr_time_next = old_arr_time_next - max(self.delivery[next_n_id]['time_window_min'], new_arr_time_next)
+                    sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[next_n_id]['time_window_min'] - new_arr_time_next)
+                    if old_arr_time_next > self.delivery[next_n_id]['time_window_min']: 
+                        # the following deliveries have to be updated
+                        next_n_sol +=1
+                        if next_n_sol < len(sol_k['path']):
+                            next_n_id = sol_k['path'][next_n_sol]
+                            new_arr_time_next = sol_k['arrival_times'][next_n_sol] - delta_arr_time_next
+                    else:
+                        update_flag = False
+                else:
+                    next_n_sol += 1
 
         # update the volume left in the vehicle
         sol_k['vol_left'] += self.delivery[n_id]['vol']
-        # decrement the number of nodes in the vehicle
-        sol_k['n_nodes'] -= 1
         # set the chosen_vrp of the delivery to False
         self.delivery[n_id]['chosen_vrp'] = False
 
