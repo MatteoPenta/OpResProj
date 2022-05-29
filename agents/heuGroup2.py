@@ -282,6 +282,10 @@ class HeuGroup2(Agent):
         # DEBUG
         print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
 
+        if best_sol_allnodes:
+            print("Best sol allnodes")
+            print(best_sol_allnodes)
+
         return [s['path'] for s in best_sol]
 
     def constructiveVRP(self, deliveries_to_do, vehicles_dict):
@@ -411,7 +415,7 @@ class HeuGroup2(Agent):
         curr_sol = sol
         best_sol = copy.deepcopy(sol)
         curr_sol_paths = [s['path'] for s in curr_sol]
-        best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)
+        best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)/(sum([s['n_nodes'] for s in curr_sol]))
         
         # Temperature of the solution
         T = T_start = -self.alns_mu*curr_obj/ np.log(0.5) 
@@ -432,7 +436,7 @@ class HeuGroup2(Agent):
 
             new_sol_paths = [s['path'] for s in sol_plus]
             new_sol_nnodes = sum([s['n_nodes'] for s in sol_plus])
-            new_obj = self.env.evaluate_VRP(new_sol_paths)
+            new_obj = self.env.evaluate_VRP(new_sol_paths)/new_sol_nnodes
 
             if new_obj < curr_obj: 
                 # Improvement in the CURRENT solution
