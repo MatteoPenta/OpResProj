@@ -73,6 +73,10 @@ class HeuGroup2(Agent):
             # Format: best_pos_k = [<prev_n>,<next_n>,<c1>,<c2>,<node_id>]
             best_pos_k = [] 
             for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
+                # DEBUG
+                if d['id'] in sol[k]['path']:
+                    print("Che minchia succede")
+                
                 # find the best position where to insert node d in vehicle k
                 # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>]
                 best_pos_d = []
@@ -141,7 +145,19 @@ class HeuGroup2(Agent):
             new_id = best_pos_ve[best_ve_c3[0]][4]
             new_prev_n = best_pos_ve[best_ve_c3[0]][0]
             new_next_n = best_pos_ve[best_ve_c3[0]][1]
+
+            # DEBUG
+            if sol[best_ve_c3[0]]['n_nodes'] > 0:
+                if sol[best_ve_c3[0]]['path'][new_prev_n] == new_id or \
+                    sol[best_ve_c3[0]]['path'][new_next_n] == new_id:
+                    print("DEBUGGGG")
+
             self.insertNode(sol[best_ve_c3[0]], new_id, new_prev_n, new_next_n)
+
+            # DEBUG
+            if self.delivery[new_id]['chosen_vrp'] == False:
+                print("ECCOLO")
+
 
             # Repeat the same procedure done before, but this time only for those vehicles 
             # whose best node was the same that we inserted in the last line of code
@@ -169,7 +185,7 @@ class HeuGroup2(Agent):
                                         best_pos_d = [prev_n, next_n, c1]
                                     elif c1 < best_pos_d[2]:
                                         best_pos_d = [prev_n, next_n, c1]
-                            if best_pos_d: # if a best placing was found, add it to "best_pos_all"
+                            if best_pos_d: 
                                 if not best_pos_k:
                                     c2_new = self.getC2(d, best_pos_d[2])
                                     best_pos_d.append(c2_new)
@@ -223,9 +239,10 @@ class HeuGroup2(Agent):
             # pick a random vehicle
             v = np.random.randint(0,len(sol))
             # pick a random node in the path of the picked vehicle, excluding the depot (first and last elements)
-            if len(sol[v]['path']) > 0:
+            if sol[v]['n_nodes'] > 0:
                 n = np.random.randint(1,len(sol[v]['path'])-1) 
-                self.removeNode(sol[v], sol[v]['path'][n], n-1, n+1)
+                n_id = sol[v]['path'][n]
+                self.removeNode(sol[v], n_id, n-1, n+1)
             else:
                 i -= 1 # repeat the iteration if an empty vehicle was picked
         return sol
@@ -412,7 +429,7 @@ class HeuGroup2(Agent):
 
     def ALNS_VRP(self, sol):
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
-        curr_sol = sol
+        curr_sol = copy.deepcopy(sol)
         best_sol = copy.deepcopy(sol)
         curr_sol_paths = [s['path'] for s in curr_sol]
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)/(sum([s['n_nodes'] for s in curr_sol]))
@@ -424,6 +441,12 @@ class HeuGroup2(Agent):
         # j: counter of the iterations without an improvement
         i = j = 0
         while i < self.alns_N_max and j < self.alns_N_IwI:
+            # DEBUG
+            if i == 55:
+                print("Iterazione 56")
+
+            deliv_info_copy = copy.deepcopy(self.delivery)
+
             # select a destroy operator d according to their weights and apply it to the solution
             d = np.random.choice(list(self.destroy_algos.keys()), p=[self.destroy_algos[dd]['p'] for dd in self.destroy_algos])
             self.destroy_algos[d]['n'] += 1
@@ -455,6 +478,10 @@ class HeuGroup2(Agent):
                     # increment the score of the used operators by sigma3
                     self.destroy_algos[d]['s'] += self.alns_sigma3
                     self.repair_algos[r]['s'] += self.alns_sigma3
+                else:
+                    # self.delivery has to be restored to what it was before the changes
+                    # introuced by the destroy/repair algorithms
+                    self.delivery = deliv_info_copy
             
             if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
                 if not best_sol_allnodes: # still not have a best solution with all nodes
@@ -636,6 +663,9 @@ class HeuGroup2(Agent):
         dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
 
         c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
+        # DEBUG
+        if (dist_prev_d + dist_d_next == 0):
+            print("DEBUG")
         c11 = c11 / (dist_prev_d + dist_d_next) # normalize c11
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
@@ -709,6 +739,11 @@ class HeuGroup2(Agent):
             sol_k['path'].append(0)
             sol_k['arrival_times'].append(0)
             sol_k['waiting_times'].append(0)
+
+        # DEBUG
+        if sol_k['path'][prev_n_sol] == best_d_id or \
+            sol_k['path'][next_n_sol] == best_d_id:
+            print("DEBUG")
 
         # 1) Add the new delivery in the chosen place
         sol_k['path'].insert(prev_n_sol+1, best_d_id)
