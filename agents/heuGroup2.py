@@ -234,7 +234,8 @@ class HeuGroup2(Agent):
         '''
         Remove q random nodes from the solution
         '''
-        q = max(1,min(int(self.env.n_deliveries / 10), 25))
+        #q = max(1,min(int(self.env.n_deliveries / 10), 25))
+        q = 10 # DEBUG
         for i in range(q):
             # pick a random vehicle
             v = np.random.randint(0,len(sol))
@@ -295,6 +296,17 @@ class HeuGroup2(Agent):
         # Returns the best solution overall in terms of objetive function and the best function found which
         # also includes all deliveries.
         best_sol, best_sol_allnodes = self.ALNS_VRP(sol)
+
+        for k in range(len(best_sol)):
+            # DEBUG
+            if len(sol[k]['path']) > 0:
+                print(f"Vehicle n. {k}")
+                for n_ind in range(len(sol[k]['path'])):
+                    n_id = sol[k]['path'][n_ind]
+                    if n_id != 0:
+                        print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
+                        print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
+                print()
 
         # DEBUG
         print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
@@ -416,6 +428,7 @@ class HeuGroup2(Agent):
                     self.insertNode(sol[k], best_d_id, best_pos_all[best_d_id][0], best_pos_all[best_d_id][1])
 
             # DEBUG
+            '''
             if len(sol[k]['path']) > 0:
                 print(f"Vehicle n. {k}")
                 for n_ind in range(len(sol[k]['path'])):
@@ -424,6 +437,7 @@ class HeuGroup2(Agent):
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
                 print()
+            '''
 
         return sol
 
