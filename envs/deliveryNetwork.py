@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import math
+from itsdangerous import json
 import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
 
 
 class DeliveryNetwork():
-    def __init__(self, settings, data_csv=None):
+    def __init__(self, settings, data_csv=None, dist_mat_csv=None):
         
         super(DeliveryNetwork, self).__init__()
         self.settings = settings
@@ -24,6 +25,9 @@ class DeliveryNetwork():
 
         if data_csv:
             file1 = open(data_csv, 'r')
+            self.delivery_info = json.load(file1)
+            file1.close()
+            '''
             lines = file1.readlines()
             for i, line in enumerate(lines):
                 if i == 0:
@@ -42,6 +46,7 @@ class DeliveryNetwork():
                     'time_window_max': float(tmp[7]),
                 }
                 points.append([float(tmp[1]), float(tmp[2])])
+            '''
         else:
             mean = [0, 0]
             cov = [[1, 0], [0, 1]]
@@ -66,10 +71,17 @@ class DeliveryNetwork():
                     'time_window_max': time_window_max,
                 }
 
+        # load the distance matrix from the csv file
+        self.distance_matrix = np.loadtxt(open(dist_mat_csv, "rb"), delimiter=",")
+
+        # load the position of the depot
+        self.depot = settings["depot"]
+
         # NB: do not assume that the is symetric!
+        '''
         if settings['distance_function'] == 'euclidian':
             self.distance_matrix = spatial.distance_matrix(points, points)
-            
+        ''' 
         
         # VEHICLE DEFINITION
         self.vehicles = []

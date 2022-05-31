@@ -21,7 +21,7 @@ if __name__ == '__main__':
     settings = json.load(fp)
     fp.close()
 
-    env = DeliveryNetwork(settings)
+    env = DeliveryNetwork(settings, "delivery_info.json", "distance_matrix.csv")
 
     agent = HeuGroup2(env)
 

@@ -254,11 +254,8 @@ class HeuGroup2(Agent):
             return []
         points = []
         self.delivery = deliveries
-        points.append([0,0]) # depot position
-        for _, ele in deliveries.items():
-            points.append([ele['lat'], ele['lng']])
         # evaluate the distance matrix
-        self.distance_matrix = spatial.distance_matrix(points, points)
+        self.distance_matrix = self.env.distance_matrix
 
         i = 1
         for d in self.delivery:
@@ -591,10 +588,10 @@ class HeuGroup2(Agent):
         # time window
         prev_n_id = sol_k['path'][prev_n_sol]
         if prev_n_id == 0: # depot (first element in the path)
-            dist_prev_d = d['dist_from_depot']
+            prev_n_index = 0
         else:
             prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-            dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
