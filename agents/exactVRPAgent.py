@@ -12,7 +12,7 @@ class ExactVRPAgent(Agent):
     def __init__(self, env):
         self.env = env
         self.name = 'ExactAgent'
-        self.quantile = 0.5
+        self.quantile = 1
         self.data_improving_quantile = {
             "quantile": [],
             "performace": []
