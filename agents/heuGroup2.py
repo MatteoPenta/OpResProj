@@ -456,8 +456,8 @@ class HeuGroup2(Agent):
         i = j = 0
         while i < self.alns_N_max and j < self.alns_N_IwI:
             # DEBUG
-            if i == 55:
-                print("Iterazione 56")
+            if i == 2553:
+                print("Iterazione 2553")
 
             deliv_info_copy = copy.deepcopy(self.delivery)
 
@@ -634,7 +634,7 @@ class HeuGroup2(Agent):
                 # If it hasn't returned, update PF to check the next delivery in the path.
                 # NOTE: if the node after next_n_sol in the path is the depot, stop 
                 if next_n_sol + 1 != len(sol_k['path'])-1:
-                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
+                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol])
 
         # if it has arrived to this point, it means that the time feasibility is 
         # respected for all deliveries in the path after the new one
