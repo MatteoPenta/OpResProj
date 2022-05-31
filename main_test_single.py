@@ -17,11 +17,11 @@ if __name__ == '__main__':
         level=logging.INFO, datefmt="%H:%M:%S",
         filemode='w'
     )
-    fp = open("./cfg/setting.json", 'r')
+    fp = open("./cfg/setting_1.json", 'r')
     settings = json.load(fp)
     fp.close()
 
-    env = DeliveryNetwork(settings, "delivery_info.json", "distance_matrix.csv")
+    env = DeliveryNetwork(settings, "./data/delivery_info.json", "./data/distance_matrix.csv")
 
     agent = HeuGroup2(env)
 

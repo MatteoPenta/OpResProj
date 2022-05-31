@@ -21,12 +21,10 @@ class ExactVRPAgent(Agent):
     def compute_delivery_to_crowdship(self, deliveries):
         if len(deliveries) == 0:
             return []
-        points = []
         self.delivery = []
         for _, ele in deliveries.items():
-            points.append([ele['lat'], ele['lng']])
             self.delivery.append(ele)
-        distance_matrix = spatial.distance_matrix(points, points)
+        distance_matrix = self.env.distance_matrix
 
         threshold = np.quantile(distance_matrix[0, :], self.quantile)
         id_to_crowdship = []

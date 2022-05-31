@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
 import copy
-from turtle import distance
-
-from sympy import solve_linear
 from agents import *
 from scipy import spatial
 import numpy as np
@@ -20,8 +17,7 @@ class HeuGroup2(Agent):
         }
         # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
         self.mu_vrp = 1
-        self.alpha1_c1_vrp = 0.8
-        self.alpha2_c1_v2p = 0.2
+        self.alpha_c1_v2p = 1
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
@@ -73,10 +69,6 @@ class HeuGroup2(Agent):
             # Format: best_pos_k = [<prev_n>,<next_n>,<c1>,<c2>,<node_id>]
             best_pos_k = [] 
             for d in [d for _,d in self.delivery.items() if self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and d['crowdshipped'] == False]:
-                # DEBUG
-                if d['id'] in sol[k]['path']:
-                    print("Che minchia succede")
-                
                 # find the best position where to insert node d in vehicle k
                 # best_pos_d = [<prev_node_index>,<next_node_index>,<c1>]
                 best_pos_d = []
@@ -110,7 +102,7 @@ class HeuGroup2(Agent):
                         # Check time feasibility first.
                         if d['dist_from_depot'] < d['time_window_max']:
                             #TODO FIX DISTANCE ASIMMETRY
-                            c1_new = 2 * d['dist_from_depot'] / max_dist_depot
+                            c1_new = d['dist_from_depot'] / max_dist_depot
                             c2_new = d['dist_from_depot']
                             if not best_pos_k:
                                 best_pos_k = [0,1,c1_new,c2_new,d['id']]
@@ -146,18 +138,7 @@ class HeuGroup2(Agent):
             new_prev_n = best_pos_ve[best_ve_c3[0]][0]
             new_next_n = best_pos_ve[best_ve_c3[0]][1]
 
-            # DEBUG
-            if sol[best_ve_c3[0]]['n_nodes'] > 0:
-                if sol[best_ve_c3[0]]['path'][new_prev_n] == new_id or \
-                    sol[best_ve_c3[0]]['path'][new_next_n] == new_id:
-                    print("DEBUGGGG")
-
             self.insertNode(sol[best_ve_c3[0]], new_id, new_prev_n, new_next_n)
-
-            # DEBUG
-            if self.delivery[new_id]['chosen_vrp'] == False:
-                print("ECCOLO")
-
 
             # Repeat the same procedure done before, but this time only for those vehicles 
             # whose best node was the same that we inserted in the last line of code
@@ -205,7 +186,7 @@ class HeuGroup2(Agent):
                                     # Check time feasibility first.
                                     if d['dist_from_depot'] < d['time_window_max']:
                                         #TODO FIX DISTANCE ASIMMETRY
-                                        c1_new = 2 * d['dist_from_depot'] / max_dist_depot
+                                        c1_new = d['dist_from_depot'] / max_dist_depot
                                         c2_new = d['dist_from_depot']
                                         if not best_pos_k:
                                             best_pos_k = [0,1,c1_new,c2_new,d['id']]
@@ -257,18 +238,14 @@ class HeuGroup2(Agent):
         # evaluate the distance matrix
         self.distance_matrix = self.env.distance_matrix
 
-        i = 1
         for d in self.delivery:
-            # save the original index of the delivery 
-            self.delivery[d]['index'] = i
             # evaluate the distance of every delivery from the depot
-            self.delivery[d]['dist_from_depot'] = self.distance_matrix[0,i]
+            self.delivery[d]['dist_from_depot'] = self.distance_matrix[0,self.delivery[d]['id']]
             # evaluate the score of the delivery
             self.delivery[d]['score'] = self.deliv_crowds_weights['a']*(1-self.delivery[d]['p_failed']) + \
                 self.deliv_crowds_weights['b']*self.delivery[d]['dist_from_depot']
             print(f"[DEBUG] Score of node {self.delivery[d]['id']}: {self.delivery[d]['score']}")
             print(f"        Distance of node {self.delivery[d]['id']}: {self.delivery[d]['dist_from_depot']}")
-            i += 1
 
         # 2) evaluate the threshold based on self.quantile
         threshold = np.quantile([d[1]['score'] for d in self.delivery.items()], self.quantile)
@@ -278,9 +255,9 @@ class HeuGroup2(Agent):
         
         # 3) select the deliveries with score above threshold
         id_to_crowdship = []
-        for _,ele in self.delivery.items():
+        for ele_id,ele in self.delivery.items():
             if ele['score'] > threshold:
-                id_to_crowdship.append(ele['id'])
+                id_to_crowdship.append(ele_id)
         
         return id_to_crowdship 
 
@@ -302,7 +279,7 @@ class HeuGroup2(Agent):
                     n_id = sol[k]['path'][n_ind]
                     if n_id != 0:
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
-                        print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[n_id]['time_window_min']}\t|\t{self.delivery[n_id]['time_window_max']}")
+                        print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
                 print()
 
         # DEBUG
@@ -338,7 +315,7 @@ class HeuGroup2(Agent):
             #   - corresponds to an arrival time that is lower
             #     than the upper limit of its time window
             aval_d = [d for _,d in self.delivery.items() if (self.nodeIsFeasibleVRP(d, sol[k]['vol_left']) and \
-                    self.distance_matrix[0,d['index']] < d['time_window_max']) and \
+                    self.distance_matrix[0,d['id']] < d['time_window_max']) and \
                     d['crowdshipped'] == False]
 
             # DEBUG
@@ -355,7 +332,7 @@ class HeuGroup2(Agent):
                 sol[k]['waiting_times'].append(0)
 
                 sol[k]['path'].append(aval_d[0]['id'])
-                sol[k]['arrival_times'].append(self.distance_matrix[0,aval_d[0]['index']])
+                sol[k]['arrival_times'].append(self.distance_matrix[0,aval_d[0]['id']])
                 sol[k]['waiting_times'].append(max(0,
                     aval_d[0]['time_window_min'] - sol[k]['arrival_times'][-1]))
                 sol[k]['vol_left'] -= aval_d[0]['vol']
@@ -452,10 +429,6 @@ class HeuGroup2(Agent):
         # j: counter of the iterations without an improvement
         i = j = 0
         while i < self.alns_N_max and j < self.alns_N_IwI:
-            # DEBUG
-            if i == 2553:
-                print("Iterazione 2553")
-
             deliv_info_copy = copy.deepcopy(self.delivery)
 
             # select a destroy operator d according to their weights and apply it to the solution
@@ -587,11 +560,7 @@ class HeuGroup2(Agent):
         # check if the arrival time of d is lower than the upper bound of its
         # time window
         prev_n_id = sol_k['path'][prev_n_sol]
-        if prev_n_id == 0: # depot (first element in the path)
-            prev_n_index = 0
-        else:
-            prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_id, d['id']] # distance between prev_n and d
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
@@ -608,8 +577,7 @@ class HeuGroup2(Agent):
         next_n_id = sol_k['path'][next_n_sol]
             
         if next_n_id != 0: # not the depot (last element in the path)
-            next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-            dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
+            dist_d_next = self.distance_matrix[d['id'], next_n_id] # distance between d and next_n
             waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
             PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
             
@@ -617,7 +585,7 @@ class HeuGroup2(Agent):
                 # If PF == 0: time feasibility is guaranteed from this point on. Return true
                 # If PF + arrival time exceeds the time window upper bound, return False
                 next_n_id = sol_k['path'][next_n_sol]
-                next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
+                next_n_timeupperbound = self.delivery[str(next_n_id)]['time_window_max']
                 if PF == 0:
                     return True
                 
@@ -658,26 +626,10 @@ class HeuGroup2(Agent):
         """
 
         prev_n_id = sol_k['path'][prev_n_sol]
-        if prev_n_id == 0: # depot (first element in the path)
-            prev_n_index = 0
-        else:
-            prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-        dist_prev_d = self.distance_matrix[prev_n_index, d['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_id, d['id']] # distance between prev_n and d
 
         next_n_id = sol_k['path'][next_n_sol]
-        if next_n_id == 0: # depot (last element in the path)
-            next_n_index = 0
-        else:
-            next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-        dist_d_next = self.distance_matrix[d['index'], next_n_index] # distance between d and next_n
-        
-        dist_prev_next = self.distance_matrix[prev_n_index, next_n_index]
-
-        c11 = dist_prev_d + dist_d_next - self.mu_vrp*dist_prev_next
-        # DEBUG
-        if (dist_prev_d + dist_d_next == 0):
-            print("DEBUG")
-        c11 = c11 / (dist_prev_d + dist_d_next) # normalize c11
+        dist_d_next = self.distance_matrix[d['id'], next_n_id] # distance between d and next_n
         
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
                 sol_k['waiting_times'][prev_n_sol] + \
@@ -688,7 +640,7 @@ class HeuGroup2(Agent):
         c12 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
         c12 = c12 / new_arr_time_next # normalize c12
 
-        c1 = self.alpha1_c1_vrp*c11 + self.alpha2_c1_v2p*c12
+        c1 = self.alpha_c1_v2p*c12
         return c1
 
     def getC2(self, d, c1):
@@ -703,7 +655,7 @@ class HeuGroup2(Agent):
 
         c1 = best_pos_ve_k[2]
         new_n_id = best_pos_ve_k[4]
-        vol_new_n = self.delivery[new_n_id]['vol']
+        vol_new_n = self.delivery[str(new_n_id)]['vol']
         sum_prev_nodes = sol_k['init_vol'] - sol_k['vol_left']
 
         return c1 + vol_new_n / (sum_prev_nodes + vol_new_n)
@@ -721,7 +673,7 @@ class HeuGroup2(Agent):
         """
         best_d = [None, 0] # [<id>, <c2>]
         for d_id in best_pos_all:
-            c2_d = self.getC2(self.delivery[d_id], best_pos_all[d_id][2])
+            c2_d = self.getC2(self.delivery[str(d_id)], best_pos_all[d_id][2])
 
             #print(f"[DEBUG] c2_d: {c2_d}")
 
@@ -757,32 +709,24 @@ class HeuGroup2(Agent):
             print("DEBUG")
 
         # 1) Add the new delivery in the chosen place
-        sol_k['path'].insert(prev_n_sol+1, best_d_id)
+        sol_k['path'].insert(prev_n_sol+1, int(best_d_id))
         # update the index of next_n
         next_n_sol += 1
 
         # 2) insert the new arrival and waiting times
         prev_n_id = sol_k['path'][prev_n_sol]
-        if prev_n_id == 0: # depot (first element in the path)
-            prev_n_index = 0
-        else:
-            prev_n_index = self.delivery[prev_n_id]['index'] # index of prev_n in the distance matrix
-        dist_prev_d = self.distance_matrix[prev_n_index, self.delivery[best_d_id]['index']] # distance between prev_n and d
+        dist_prev_d = self.distance_matrix[prev_n_id, best_d_id] # distance between prev_n and d
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
                 dist_prev_d
-        waiting_time_d = max(0, self.delivery[best_d_id]['time_window_min'] - arr_time_d)
+        waiting_time_d = max(0, self.delivery[str(best_d_id)]['time_window_min'] - arr_time_d)
         sol_k['arrival_times'].insert(prev_n_sol+1, arr_time_d)
         sol_k['waiting_times'].insert(prev_n_sol+1, waiting_time_d)
 
 
         # 3) update all the arrival & waiting times of the following deliveries
         next_n_id = sol_k['path'][next_n_sol]
-        if next_n_id == 0: # depot (last element in the path)
-            next_n_index = 0
-        else:
-            next_n_index = self.delivery[next_n_id]['index'] # index of next_n in the distance matrix
-        dist_d_next = self.distance_matrix[self.delivery[best_d_id]['index'], next_n_index] # distance between d and next_n
+        dist_d_next = self.distance_matrix[best_d_id, next_n_id] # distance between d and next_n
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
         additional_delay_flag = True
@@ -794,8 +738,8 @@ class HeuGroup2(Agent):
                 # DEBUG
                 if next_n_id == 0:
                     print("DEBUG")
-                delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[next_n_id]['time_window_min'])
-                arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
+                delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[str(next_n_id)]['time_window_min'])
+                arr_time_relative = self.delivery[str(next_n_id)]['time_window_min']-new_arr_time_next
                 sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
                 if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
                     # Update the arrival time at the delivery after "next_n" taking into consideration
@@ -810,11 +754,11 @@ class HeuGroup2(Agent):
                 next_n_sol +=1
         
         # 4) update the volume left in the vehicle
-        sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
+        sol_k['vol_left'] -= self.delivery[str(best_d_id)]['vol']
         # 5) increment the number of nodes in the vehicle
         sol_k['n_nodes'] += 1
         # 6) set the chosen_vrp of the delivery to True
-        self.delivery[best_d_id]['chosen_vrp'] = True
+        self.delivery[str(best_d_id)]['chosen_vrp'] = True
 
     def removeNode(self, sol_k, n_id, prev_n_sol, next_n_sol):
         # remove the delivery from the solution
@@ -833,15 +777,7 @@ class HeuGroup2(Agent):
             # update the arrival & waiting times of the following deliveries
             prev_n_id = sol_k['path'][prev_n_sol]
             next_n_id = sol_k['path'][next_n_sol]
-            if prev_n_id == 0:
-                prev_n_index = 0
-            else:
-                prev_n_index = self.delivery[prev_n_id]['index']
-            if next_n_id == 0:
-                next_n_index = 0
-            else:
-                next_n_index = self.delivery[next_n_id]['index']
-            dist_prev_next = self.distance_matrix[prev_n_index,next_n_index]
+            dist_prev_next = self.distance_matrix[prev_n_id,next_n_id]
             new_arr_time_next = sol_k['arrival_times'][prev_n_sol] + sol_k['waiting_times'][prev_n_sol] \
                 + dist_prev_next
 
@@ -852,9 +788,9 @@ class HeuGroup2(Agent):
                 sol_k['arrival_times'][next_n_sol] = new_arr_time_next
                 if next_n_sol != len(sol_k['path'])-1: # NOT the depot
                     # difference in the arrival time at the FOLLOWING node w.r.t. next_n
-                    delta_arr_time_next = old_arr_time_next - max(self.delivery[next_n_id]['time_window_min'], new_arr_time_next)
-                    sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[next_n_id]['time_window_min'] - new_arr_time_next)
-                    if old_arr_time_next > self.delivery[next_n_id]['time_window_min']: 
+                    delta_arr_time_next = old_arr_time_next - max(self.delivery[str(next_n_id)]['time_window_min'], new_arr_time_next)
+                    sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[str(next_n_id)]['time_window_min'] - new_arr_time_next)
+                    if old_arr_time_next > self.delivery[str(next_n_id)]['time_window_min']: 
                         # the following deliveries have to be updated
                         next_n_sol +=1
                         if next_n_sol < len(sol_k['path']):
@@ -866,9 +802,9 @@ class HeuGroup2(Agent):
                     next_n_sol += 1
 
         # update the volume left in the vehicle
-        sol_k['vol_left'] += self.delivery[n_id]['vol']
+        sol_k['vol_left'] += self.delivery[str(n_id)]['vol']
         # set the chosen_vrp of the delivery to False
-        self.delivery[n_id]['chosen_vrp'] = False
+        self.delivery[str(n_id)]['chosen_vrp'] = False
 
 
 
