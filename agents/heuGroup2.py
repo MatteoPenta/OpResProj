@@ -22,8 +22,8 @@ class HeuGroup2(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 50000 # max number of iterations
-        self.alns_N_IwI = 6000 # max number of iterations without an improvement
+        self.alns_N_max = 100000 # max number of iterations
+        self.alns_N_IwI = 10000 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
