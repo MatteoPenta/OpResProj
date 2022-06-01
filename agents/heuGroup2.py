@@ -198,7 +198,6 @@ class HeuGroup2(Agent):
                             best_pos_ve[k] = best_pos_k
         return sol
         
-
     def alns_repair_regret(self, sol):
         """
         Insert as many nodes as possible in the solution. 
@@ -390,22 +389,29 @@ class HeuGroup2(Agent):
 
         return sol
                         
-
     def alns_repair_random(self, sol):
         print("Greedy ALNS")
 
     def alns_destroy_shaw(self, sol):
-        print("Shaw algorithm")
+        """
+        Remove q nodes from the solution by applying the Shaw Removal Heuristic,
+        which tries to remove cluster of deliveries which have similar characteristics
+        so that they can be easily exchanged.
+        """
+        print("Shaw heuristic")
     
     def alns_destroy_worst(self, sol):
+        """
+        Remove q nodes from the solution. The node removed in each one of the q 
+        iterations is the one associated to the highest cost in terms of c3 (a cost function).
+        """
         print("Shaw algorithm")
     
     def alns_destroy_random(self, sol):
         """
         Remove q random nodes from the solution
         """
-        #q = max(1,min(int(self.env.n_deliveries / 10), 25))
-        q = 10 # DEBUG
+        q = max(1,min(int(self.env.n_deliveries / 10), 25))
         for i in range(q):
             # pick a random vehicle
             v = np.random.randint(0,len(sol))
@@ -469,7 +475,7 @@ class HeuGroup2(Agent):
                     if n_id != 0:
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
-                print()
+                print() 
 
         # DEBUG
         print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
