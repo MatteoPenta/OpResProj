@@ -200,7 +200,194 @@ class HeuGroup2(Agent):
         
 
     def alns_repair_regret(self, sol):
-        print("Greedy ALNS")
+        """
+        Insert as many nodes as possible in the solution. 
+        At each of the q iterations, the node whose "regret value"
+        is the highest will be inserted in the minimum cost position.
+        In the regret-2 implementation, the regret value is defined as
+        the cost difference between inserting the node in the second 
+        best solution compared to the best solution.
+        """
+        ins_avail_flag = True # there are still nodes available for insertion
+        while ins_avail_flag:
+            # Initialize the list that will contain the insertion with
+            # the best (highest) regret value among all the insertions that
+            # will be found. 
+            best_ins_regretval = [] 
+            # Initialize also the best regret value
+            best_regretval = None
+            # Nodes that can be inserted in one vehicle only will have the priority.
+            # This flag will be set to True when one of such nodes is found
+            one_vehicle_flag = False
+
+            # Define the maximum distance from depot considering the nodes that are still not in a solution
+            # It will be needed to normalize the c1 coefficient when we are inserting a node in an empty vehicle
+            avail_nodes = [d['dist_from_depot'] for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False]
+            if avail_nodes:
+                max_dist_depot = max(avail_nodes)
+
+            # list of nodes not yet in a solution and not crowdshipped
+            for d in [d for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowshipped'] == False]:
+                '''
+                best_ins_d: best vehicle where to insert d in terms of c3 
+                    Structure: [
+                        <vehicle_number>,
+                        <prev_n>,
+                        <next_n>,
+                        <c1 of the insertion>,
+                        <node_id>,
+                        <c3 of the insertion>
+                    ]
+                
+                second_best_d: second best vehicle where to insert d in terms of c3
+                '''
+                best_ins_d = [] 
+                second_best_ins_d = [] 
+                # consider each vehicle
+                for k in range(len(sol)):
+                    # check if the node d would fit in the vehicle k
+                    if d['vol'] <= sol[k]['vol_left']:
+                        # control each possible position where to insert d in k
+                        best_pos_d = []
+                        for i in range(len(sol[k]['path'])-1):
+                            prev_n = i
+                            next_n = i+1
+                            #check time feasibilty 
+                            if self.nodeTimeFeasibleVRP(sol[k],prev_n,next_n):
+                                c1 = self.getC1(sol[k], prev_n, d, next_n)
+                                
+                                if not best_pos_d:
+                                    best_pos_d = [prev_n, next_n, c1]
+                                elif c1 < best_pos_d[2]:
+                                    best_pos_d = [prev_n, next_n, c1]
+                        if best_pos_d:
+                            c3 = self.getC3(sol[k], [
+                                best_pos_d[0],
+                                best_pos_d[1],
+                                best_pos_d[2],
+                                0, # c2 is not considered
+                                d['id']
+                            ])
+                            if not best_ins_d:  
+                                best_ins_d = [
+                                    k,
+                                    best_pos_d[0],
+                                    best_pos_d[1],
+                                    best_pos_d[2],
+                                    d['id'],
+                                    c3
+                                ]
+                            elif not second_best_ins_d:
+                                second_best_ins_d = [
+                                    k,
+                                    best_pos_d[0],
+                                    best_pos_d[1],
+                                    best_pos_d[2],
+                                    d['id'],
+                                    c3
+                                ]
+                            else:
+                                if c3 < second_best_ins_d[5]:
+                                    if c3 < best_ins_d[5]:
+                                        # new best insertion found for this node
+                                        best_ins_d = [
+                                            k,
+                                            best_pos_d[0],
+                                            best_pos_d[1],
+                                            best_pos_d[2],
+                                            d['id'],
+                                            c3
+                                        ]
+                                    else:
+                                        # new second best insertion found for this node
+                                        second_best_ins_d = [
+                                            k,
+                                            best_pos_d[0],
+                                            best_pos_d[1],
+                                            best_pos_d[2],
+                                            d['id'],
+                                            c3
+                                        ]
+                        else: # referred to if best_pos_d
+                            # check for empty vehicles
+                            if sol[k]['n_nodes'] == 0:
+                                # Check time feasibility first.
+                                if d['dist_from_depot'] < d['time_window_max']:
+                                    c1_new = d['dist_from_depot'] / max_dist_depot
+                                    c3 = self.getC3(sol[k],0,1,c1_new,0,d['id'])
+                                    if not best_ins_d:
+                                        best_ins_d = [
+                                            k,
+                                            0,
+                                            1,
+                                            c1_new,
+                                            d['id'],
+                                            c3
+                                        ]
+                                    elif not second_best_ins_d:
+                                        second_best_ins_d = [
+                                            k,
+                                            0,
+                                            1,
+                                            c1_new,
+                                            d['id'],
+                                            c3
+                                        ]
+                                    else:
+                                        if c3 < second_best_ins_d[5]:
+                                            if c3 < best_ins_d[5]:
+                                                # new best insertion found for this node
+                                                best_ins_d = [
+                                                    k,
+                                                    best_pos_d[0],
+                                                    best_pos_d[1],
+                                                    best_pos_d[2],
+                                                    d['id'],
+                                                    c3
+                                                ]
+                                            else:
+                                                # new second best insertion found for this node
+                                                second_best_ins_d = [
+                                                    k,
+                                                    best_pos_d[0],
+                                                    best_pos_d[1],
+                                                    best_pos_d[2],
+                                                    d['id'],
+                                                    c3
+                                                ]
+                                
+                if not second_best_ins_d:
+                    if not one_vehicle_flag:
+                        one_vehicle_flag = True
+                        best_ins_regretval = best_ins_d.copy()
+                    else: # not the first node which has only one vehicle where it can be inserted
+                        # Solve the tie by comparing the c3 values
+                        if best_ins_d[5] < best_ins_regretval[5]:
+                            best_ins_regretval = best_ins_d.copy()
+                else: # nodes which can be inserted in (at least) two vehicles
+                    if not one_vehicle_flag:
+                        # Evaluate the regret value
+                        regretval = second_best_ins_d[5] - best_ins_d[5]
+                        if not best_ins_regretval:
+                            best_ins_regretval = best_ins_d.copy()
+                            best_regretval = regretval
+                        elif regretval > best_regretval:
+                            best_ins_regretval = best_ins_d.copy()
+                            best_regretval = regretval
+
+            # all nodes have been considered...
+            if best_ins_regretval:
+                # if a best insertion in terms of regret value has been found, 
+                # perform it.
+                self.insertNode(
+                    sol[best_ins_regretval[0]],
+                    best_ins_regretval[4],
+                    best_ins_regretval[1],
+                    best_ins_regretval[2],
+                )
+            else:
+                ins_avail_flag = False
+                        
 
     def alns_repair_random(self, sol):
         print("Greedy ALNS")
@@ -212,9 +399,9 @@ class HeuGroup2(Agent):
         print("Shaw algorithm")
     
     def alns_destroy_random(self, sol):
-        '''
+        """
         Remove q random nodes from the solution
-        '''
+        """
         #q = max(1,min(int(self.env.n_deliveries / 10), 25))
         q = 10 # DEBUG
         for i in range(q):

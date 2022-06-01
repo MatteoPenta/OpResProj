@@ -5,7 +5,6 @@ import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
 
-
 class DeliveryNetwork():
     def __init__(self, settings, data_csv=None, dist_mat_csv=None):
         
