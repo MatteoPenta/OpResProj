@@ -39,8 +39,8 @@ class HeuGroup2(Agent):
         #   's': score of the algorithm in the current segment (used to evaluate the weight)
         #   'n': number of times the algorithm was chosen in the current segment
         self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'p': 1, 'w': 1, 's': 0, 'n': 0}
-            #'regret': {'func': self.alns_repair_regret, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
             #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
             #'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
         }
@@ -227,7 +227,7 @@ class HeuGroup2(Agent):
                 max_dist_depot = max(avail_nodes)
 
             # list of nodes not yet in a solution and not crowdshipped
-            for d in [d for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowshipped'] == False]:
+            for d in [d for _,d in self.delivery.items() if d['chosen_vrp'] == False and d['crowdshipped'] == False]:
                 '''
                 best_ins_d: best vehicle where to insert d in terms of c3 
                     Structure: [
@@ -253,7 +253,7 @@ class HeuGroup2(Agent):
                             prev_n = i
                             next_n = i+1
                             #check time feasibilty 
-                            if self.nodeTimeFeasibleVRP(sol[k],prev_n,next_n):
+                            if self.nodeTimeFeasibleVRP(sol[k],prev_n,d,next_n):
                                 c1 = self.getC1(sol[k], prev_n, d, next_n)
                                 
                                 if not best_pos_d:
@@ -314,7 +314,7 @@ class HeuGroup2(Agent):
                                 # Check time feasibility first.
                                 if d['dist_from_depot'] < d['time_window_max']:
                                     c1_new = d['dist_from_depot'] / max_dist_depot
-                                    c3 = self.getC3(sol[k],0,1,c1_new,0,d['id'])
+                                    c3 = self.getC3(sol[k],[0,1,c1_new,0,d['id']])
                                     if not best_ins_d:
                                         best_ins_d = [
                                             k,
