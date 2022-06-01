@@ -25,8 +25,14 @@ if __name__ == '__main__':
 
     agent = HeuGroup2(env)
 
+    # TRAIN
+    for s in range(3):
+        env.prepare_crowdsourcing_scenario()
+        agent.learn_and_save()
+    # STOP TRAINING
+    agent.start_test()
+    # TEST
     env.prepare_crowdsourcing_scenario()
-    
     id_deliveries_to_crowdship = agent.compute_delivery_to_crowdship(
         env.get_delivery()
     )
@@ -34,7 +40,7 @@ if __name__ == '__main__':
     remaining_deliveries, tot_crowd_cost = env.run_crowdsourcing(id_deliveries_to_crowdship)
     print("remaining_deliveries: ", remaining_deliveries )
     print("tot_crowd_cost: ", tot_crowd_cost)
-    VRP_solution = agent.compute_VRP(remaining_deliveries, env.get_vehicles(), debug_model=True, verbose=True)
+    VRP_solution = agent.compute_VRP(remaining_deliveries, env.get_vehicles())
     print("VRP_solution_exact: ", VRP_solution)
 
     env.render_tour(remaining_deliveries, VRP_solution)

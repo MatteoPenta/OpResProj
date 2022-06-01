@@ -17,13 +17,12 @@ class HeuGroup2(Agent):
         }
         # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
         self.mu_vrp = 1
-        self.alpha_c1_v2p = 1
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 100000 # max number of iterations
-        self.alns_N_IwI = 10000 # max number of iterations without an improvement
+        self.alns_N_max = 50000 # max number of iterations
+        self.alns_N_IwI = 2000 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -42,7 +41,6 @@ class HeuGroup2(Agent):
             'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
             'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
             #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
-            #'closest_pair': {'func': self.alns_repair_closest_pair, 'p': 0.25, 'w': 1, 's': 0, 'n': 0}
         }
 
         # Destroy algorithms (ALNS)
@@ -50,6 +48,20 @@ class HeuGroup2(Agent):
             #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
             'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
             'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
+        }
+
+        # Dictionaries used in the learning phase
+        self.data_improv_volw = {
+            "volw": [],
+            "obj": []
+        }
+        self.data_improv_alns_eps = {
+            "alns_eps": [],
+            "obj": []
+        }
+        self.data_improv_alns_rho = {
+            "alns_rho": [],
+            "obj": []
         }
     
     # ALNS Heuristics
@@ -444,8 +456,7 @@ class HeuGroup2(Agent):
         )
 
         return sol
-            
-    
+               
     def alns_destroy_random(self, sol):
         """
         Remove q random nodes from the solution
@@ -495,17 +506,25 @@ class HeuGroup2(Agent):
         
         return id_to_crowdship 
 
-
-    def compute_VRP(self, deliveries_to_do, vehicles_dict, gap=None, time_limit=None, verbose=False, debug_model=False):
+    def compute_VRP(self, deliveries_to_do, vehicles_dict, alns_N_max=None, alns_N_IwI=None):
         # Generate an initial feasible solution through the Solomon heuristic
         sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
         
         # ALNS Implementation
         # Returns the best solution overall in terms of objetive function and the best function found which
         # also includes all deliveries.
-        best_sol, best_sol_allnodes = self.ALNS_VRP(sol)
+        if not alns_N_max:
+            alns_N_max = self.alns_N_max
+        if not alns_N_IwI:
+            alns_N_IwI = self.alns_N_IwI
+        best_sol, best_sol_allnodes = self.ALNS_VRP(sol, alns_N_max, alns_N_IwI)
 
-        for k in range(len(best_sol)):
+        # If a solution containing all the deliveries couldn't be found, 
+        # try to insert them in the solution
+        if not best_sol_allnodes:
+            print("Incomplete solution")
+
+        """ for k in range(len(best_sol)):
             # DEBUG
             if len(sol[k]['path']) > 0:
                 print(f"Vehicle n. {k}")
@@ -514,7 +533,7 @@ class HeuGroup2(Agent):
                     if n_id != 0:
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
-                print() 
+                print() """ 
 
         # DEBUG
         print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
@@ -649,7 +668,7 @@ class HeuGroup2(Agent):
 
         return sol
 
-    def ALNS_VRP(self, sol):
+    def ALNS_VRP(self, sol, alns_N_max, alns_N_IwI):
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
         curr_sol = copy.deepcopy(sol)
         best_sol = copy.deepcopy(sol)
@@ -657,12 +676,12 @@ class HeuGroup2(Agent):
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)/(sum([s['n_nodes'] for s in curr_sol]))
         
         # Temperature of the solution
-        T = T_start = -self.alns_mu*curr_obj/ np.log(0.5) 
+        T = -self.alns_mu*curr_obj/ np.log(0.5) 
 
         # i: iteration counter
         # j: counter of the iterations without an improvement
         i = j = 0
-        while i < self.alns_N_max and j < self.alns_N_IwI:
+        while i < alns_N_max and j < alns_N_IwI:
             deliv_info_copy = copy.deepcopy(self.delivery)
 
             # select a destroy operator d according to their weights and apply it to the solution
@@ -839,7 +858,6 @@ class HeuGroup2(Agent):
         # respected for all deliveries in the path after the new one
         return True
 
-
     def getC1(self, sol_k, prev_n_sol, d, next_n_sol):
         """
         Description
@@ -871,10 +889,9 @@ class HeuGroup2(Agent):
         waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
-        c12 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
-        c12 = c12 / new_arr_time_next # normalize c12
+        c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
+        c1 = c1 / new_arr_time_next # normalize c1
 
-        c1 = self.alpha_c1_v2p*c12
         return c1
 
     def getC2(self, d, c1):
@@ -1040,10 +1057,27 @@ class HeuGroup2(Agent):
         # set the chosen_vrp of the delivery to False
         self.delivery[str(n_id)]['chosen_vrp'] = False
 
-
-
     def learn_and_save(self):
-        time.sleep(7)
+        # test volw
+        mu = self.volw
+        sigma = mu/10
+        n = 10
+        volw_rnd = np.random.normal(mu, sigma, n)
+        for i in range(n): 
+            alns_N_max = 2000
+            alns_N_IwI = 200
+            self.volw = volw_rnd[i]
+            id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
+            remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
+            VRP_solution = self.compute_VRP(remaining_deliveries, self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            obj = self.env.evaluate_VRP(VRP_solution)
+            self.data_improv_volw['volw'].append(volw_rnd[i])
+            self.data_improv_volw['obj'].append(obj)
+        
     
     def start_test(self):
-        pass
+        # fix volw
+        #volw_pos_min = np.where(self.data_improv_volw['obj'] == min(self.data_improv_volw['obj']))[0][0]
+        volw_pos_min = self.data_improv_volw['obj'].index(min(self.data_improv_volw['obj']))
+        self.volw = self.data_improv_volw['volw'][volw_pos_min]
+        print(f"[DEBUG] CHOSEN VOLW: {self.volw}")
