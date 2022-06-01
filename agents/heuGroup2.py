@@ -22,8 +22,8 @@ class HeuGroup2(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 10000 # max number of iterations
-        self.alns_N_IwI = 3000 # max number of iterations without an improvement
+        self.alns_N_max = 50000 # max number of iterations
+        self.alns_N_IwI = 6000 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -48,8 +48,8 @@ class HeuGroup2(Agent):
         # Destroy algorithms (ALNS)
         self.destroy_algos = {
             #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            #'worst': {'func': self.alns_destroy_worst, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'random': {'func': self.alns_destroy_random, 'p': 1, 'w': 1, 's': 0, 'n': 0}
+            'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
         }
     
     # ALNS Heuristics
@@ -405,7 +405,46 @@ class HeuGroup2(Agent):
         Remove q nodes from the solution. The node removed in each one of the q 
         iterations is the one associated to the highest cost in terms of c3 (a cost function).
         """
-        print("Shaw algorithm")
+        q = max(1,min(int(self.env.n_deliveries / 10), 25))
+        for i in range(q):
+            # Create a list called "deliv" which contains pairs of the type [<node_id>,<vehicle # of the node>]
+            deliv = []
+            for v in range(len(sol)):
+                for n in sol[v]['path']:
+                    if n != 0:
+                        deliv.append([n,v])
+
+        # sort "deliv" on the basis of the cost function c3 evaluated for each delivery
+        worst_deliv = sorted(deliv, key= lambda x: \
+                self.getC3(
+                    sol[x[1]],
+                    [
+                        sol[x[1]]['path'].index(x[0])-1,
+                        sol[x[1]]['path'].index(x[0])+1,
+                        self.getC1(
+                            sol[x[1]],
+                            sol[x[1]]['path'].index(x[0])-1,
+                            self.delivery[str(x[0])],
+                            sol[x[1]]['path'].index(x[0])+1
+                        ),
+                        0,
+                        x[0]
+                    ]
+                ), reverse=True)
+        
+        # choose a random number y in the interval [0,1]
+        y = np.random.uniform()
+        p = 4 # degree of randomness of the node choice. p >= 1. p = 1: random choice
+        # Choose which delivery will be removed. Notice that the removal is randomized, 
+        # with the degree of randomization controlled by the parameter p
+        worst_d = worst_deliv[int(np.power(y,p)*len(worst_deliv))]
+        self.removeNode(sol[worst_d[1]], worst_d[0], 
+            sol[worst_d[1]]['path'].index(worst_d[0])-1,
+            sol[worst_d[1]]['path'].index(worst_d[0])+1
+        )
+
+        return sol
+            
     
     def alns_destroy_random(self, sol):
         """
