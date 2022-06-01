@@ -339,9 +339,9 @@ class HeuGroup2(Agent):
                                                 # new best insertion found for this node
                                                 best_ins_d = [
                                                     k,
-                                                    best_pos_d[0],
-                                                    best_pos_d[1],
-                                                    best_pos_d[2],
+                                                    0,
+                                                    1,
+                                                    c1_new,
                                                     d['id'],
                                                     c3
                                                 ]
@@ -349,9 +349,9 @@ class HeuGroup2(Agent):
                                                 # new second best insertion found for this node
                                                 second_best_ins_d = [
                                                     k,
-                                                    best_pos_d[0],
-                                                    best_pos_d[1],
-                                                    best_pos_d[2],
+                                                    0,
+                                                    1,
+                                                    c1_new,
                                                     d['id'],
                                                     c3
                                                 ]
@@ -387,6 +387,8 @@ class HeuGroup2(Agent):
                 )
             else:
                 ins_avail_flag = False
+
+        return sol
                         
 
     def alns_repair_random(self, sol):
