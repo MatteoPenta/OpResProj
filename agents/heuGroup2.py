@@ -31,6 +31,7 @@ class HeuGroup2(Agent):
         self.alns_sigma2 = 16 # if the new sol is better than the curr one
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
+        self.alns_p = 4 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
         # Repair algorithms (ALNS)
         #   'p': probability of the algorithm
@@ -61,6 +62,10 @@ class HeuGroup2(Agent):
         }
         self.data_improv_alns_rho = {
             "alns_rho": [],
+            "obj": []
+        }
+        self.data_improv_alns_p = {
+            "alns_p": [],
             "obj": []
         }
     
@@ -446,10 +451,9 @@ class HeuGroup2(Agent):
         
         # choose a random number y in the interval [0,1]
         y = np.random.uniform()
-        p = 4 # degree of randomness of the node choice. p >= 1. p = 1: random choice
         # Choose which delivery will be removed. Notice that the removal is randomized, 
         # with the degree of randomization controlled by the parameter p
-        worst_d = worst_deliv[int(np.power(y,p)*len(worst_deliv))]
+        worst_d = worst_deliv[int(np.power(y,self.alns_p)*len(worst_deliv))]
         self.removeNode(sol[worst_d[1]], worst_d[0], 
             sol[worst_d[1]]['path'].index(worst_d[0])-1,
             sol[worst_d[1]]['path'].index(worst_d[0])+1
@@ -1058,14 +1062,17 @@ class HeuGroup2(Agent):
         self.delivery[str(n_id)]['chosen_vrp'] = False
 
     def learn_and_save(self):
+        n = 8 # num of iterations to test each parameter
+        # num of iterations used in the ALNS algorithm
+        alns_N_max = 3000
+        alns_N_IwI = 300
+        
         # test volw
         mu = self.volw
         sigma = mu/10
-        n = 10
-        volw_rnd = np.random.normal(mu, sigma, n)
+        volw_rnd = np.random.normal(mu, sigma, n-1)
+        volw_rnd = np.insert(volw_rnd, 0, mu)
         for i in range(n): 
-            alns_N_max = 2000
-            alns_N_IwI = 200
             self.volw = volw_rnd[i]
             id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
@@ -1073,11 +1080,67 @@ class HeuGroup2(Agent):
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_volw['volw'].append(volw_rnd[i])
             self.data_improv_volw['obj'].append(obj)
+
+        # test alns_rho
+        mu = self.alns_rho
+        sigma = mu/10
+        alns_rho_rnd = np.random.normal(mu, sigma, n-1)
+        alns_rho_rnd = np.insert(alns_rho_rnd, 0, mu)
+        for i in range(n): 
+            self.alns_rho = alns_rho_rnd[i]
+            id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
+            remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
+            VRP_solution = self.compute_VRP(remaining_deliveries, self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            obj = self.env.evaluate_VRP(VRP_solution)
+            self.data_improv_alns_rho['alns_rho'].append(alns_rho_rnd[i])
+            self.data_improv_alns_rho['obj'].append(obj)
         
+        # test alns_eps
+        mu = self.alns_eps
+        sigma = mu/10
+        alns_eps_rnd = np.random.normal(mu, sigma, n-1)
+        alns_eps_rnd = np.insert(alns_eps_rnd, 0, mu)
+        for i in range(n): 
+            self.alns_eps = alns_eps_rnd[i]
+            id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
+            remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
+            VRP_solution = self.compute_VRP(remaining_deliveries, self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            obj = self.env.evaluate_VRP(VRP_solution)
+            self.data_improv_alns_eps['alns_eps'].append(alns_eps_rnd[i])
+            self.data_improv_alns_eps['obj'].append(obj)
+
+        # test alns_p
+        alns_p_rnd = np.random.uniform(1, 10, n-1)
+        alns_p_rnd = np.insert(alns_p_rnd, 0, self.alns_p)
+        for i in range(n): 
+            self.alns_p = alns_p_rnd[i]
+            id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
+            remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
+            VRP_solution = self.compute_VRP(remaining_deliveries, self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            obj = self.env.evaluate_VRP(VRP_solution)
+            self.data_improv_alns_p['alns_p'].append(alns_p_rnd[i])
+            self.data_improv_alns_p['obj'].append(obj)
     
     def start_test(self):
         # fix volw
-        #volw_pos_min = np.where(self.data_improv_volw['obj'] == min(self.data_improv_volw['obj']))[0][0]
         volw_pos_min = self.data_improv_volw['obj'].index(min(self.data_improv_volw['obj']))
         self.volw = self.data_improv_volw['volw'][volw_pos_min]
+        print()
         print(f"[DEBUG] CHOSEN VOLW: {self.volw}")
+        
+        # fix alns_rho
+        alns_rho_pos_min = self.data_improv_alns_rho['obj'].index(min(self.data_improv_alns_rho['obj']))
+        self.alns_rho = self.data_improv_alns_rho['alns_rho'][alns_rho_pos_min]
+        print(f"[DEBUG] CHOSEN alns_rho: {self.alns_rho}")
+
+        # fix alns_eps
+        alns_eps_pos_min = self.data_improv_alns_eps['obj'].index(min(self.data_improv_alns_eps['obj']))
+        self.alns_eps = self.data_improv_alns_eps['alns_eps'][alns_eps_pos_min]
+        print(f"[DEBUG] CHOSEN alns_eps: {self.alns_eps}")
+
+        # fix alns_p
+        alns_p_pos_min = self.data_improv_alns_p['obj'].index(min(self.data_improv_alns_p['obj']))
+        self.alns_p = self.data_improv_alns_p['alns_p'][alns_p_pos_min]
+        print(f"[DEBUG] CHOSEN alns_p: {self.alns_p}")
+
+        print()
