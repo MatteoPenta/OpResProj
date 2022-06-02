@@ -15,7 +15,9 @@ class HeuGroup2(Agent):
             "a": 0.5,
             "b": 0.5
         }
-        # note: alpha1 + alpha2 must be 1 and each of them must be >= 0
+        # note: beta1 + beta2 must be 1 and each of them must be >= 0
+        self.beta1_c3 = 0.5
+        self.beta2_c3 = 1-self.beta1_c3
         self.mu_vrp = 1
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
@@ -31,7 +33,7 @@ class HeuGroup2(Agent):
         self.alns_sigma2 = 16 # if the new sol is better than the curr one
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
-        self.alns_p = 4 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
+        self.alns_p = 1 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
         # Repair algorithms (ALNS)
         #   'p': probability of the algorithm
@@ -51,6 +53,10 @@ class HeuGroup2(Agent):
             'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
         }
 
+        self.vehicles_dict = []
+        self.vehicles_order = []
+        self.veh_p = 1 # degree of "randomness" used in the generation of vehicles permutations
+
         # Dictionaries used in the learning phase
         self.data_improv_volw = {
             "volw": [],
@@ -60,8 +66,8 @@ class HeuGroup2(Agent):
             "alns_eps": [],
             "obj": []
         }
-        self.data_improv_alns_rho = {
-            "alns_rho": [],
+        self.data_improv_beta1_c3 = {
+            "beta1_c3": [],
             "obj": []
         }
         self.data_improv_alns_p = {
@@ -431,33 +437,33 @@ class HeuGroup2(Agent):
                     if n != 0:
                         deliv.append([n,v])
 
-        # sort "deliv" on the basis of the cost function c3 evaluated for each delivery
-        worst_deliv = sorted(deliv, key= lambda x: \
-                self.getC3(
-                    sol[x[1]],
-                    [
-                        sol[x[1]]['path'].index(x[0])-1,
-                        sol[x[1]]['path'].index(x[0])+1,
-                        self.getC1(
-                            sol[x[1]],
+            # sort "deliv" on the basis of the cost function c3 evaluated for each delivery
+            worst_deliv = sorted(deliv, key= lambda x: \
+                    self.getC3(
+                        sol[x[1]],
+                        [
                             sol[x[1]]['path'].index(x[0])-1,
-                            self.delivery[str(x[0])],
-                            sol[x[1]]['path'].index(x[0])+1
-                        ),
-                        0,
-                        x[0]
-                    ]
-                ), reverse=True)
-        
-        # choose a random number y in the interval [0,1]
-        y = np.random.uniform()
-        # Choose which delivery will be removed. Notice that the removal is randomized, 
-        # with the degree of randomization controlled by the parameter p
-        worst_d = worst_deliv[int(np.power(y,self.alns_p)*len(worst_deliv))]
-        self.removeNode(sol[worst_d[1]], worst_d[0], 
-            sol[worst_d[1]]['path'].index(worst_d[0])-1,
-            sol[worst_d[1]]['path'].index(worst_d[0])+1
-        )
+                            sol[x[1]]['path'].index(x[0])+1,
+                            self.getC1(
+                                sol[x[1]],
+                                sol[x[1]]['path'].index(x[0])-1,
+                                self.delivery[str(x[0])],
+                                sol[x[1]]['path'].index(x[0])+1
+                            ),
+                            0,
+                            x[0]
+                        ]
+                    ), reverse=True)
+            
+            # choose a random number y in the interval [0,1]
+            y = np.random.uniform()
+            # Choose which delivery will be removed. Notice that the removal is randomized, 
+            # with the degree of randomization controlled by the parameter p
+            worst_d = worst_deliv[int(np.power(y,self.alns_p)*(len(worst_deliv)-1))]
+            self.removeNode(sol[worst_d[1]], worst_d[0], 
+                sol[worst_d[1]]['path'].index(worst_d[0])-1,
+                sol[worst_d[1]]['path'].index(worst_d[0])+1
+            )
 
         return sol
                
@@ -511,6 +517,9 @@ class HeuGroup2(Agent):
         return id_to_crowdship 
 
     def compute_VRP(self, deliveries_to_do, vehicles_dict, alns_N_max=None, alns_N_IwI=None):
+        if self.vehicles_dict:
+            vehicles_dict = self.vehicles_dict
+        
         # Generate an initial feasible solution through the Solomon heuristic
         sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
         
@@ -527,6 +536,9 @@ class HeuGroup2(Agent):
         # try to insert them in the solution
         if not best_sol_allnodes:
             print("Incomplete solution")
+        else:
+            print("Best sol allnodes")
+            print(best_sol_allnodes)
 
         """ for k in range(len(best_sol)):
             # DEBUG
@@ -539,14 +551,13 @@ class HeuGroup2(Agent):
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
                 print() """ 
 
+
         # DEBUG
         print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
 
-        if best_sol_allnodes:
-            print("Best sol allnodes")
-            print(best_sol_allnodes)
-
-        return [s['path'] for s in best_sol]
+        # Revert the order of vehicles to the one used in the original scheme
+        # then, return the best solution
+        return [s['path'] for s in self.restore_vehicles_order(best_sol)]
 
     def constructiveVRP(self, deliveries_to_do, vehicles_dict):
         for d in self.delivery:
@@ -676,7 +687,7 @@ class HeuGroup2(Agent):
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
         curr_sol = copy.deepcopy(sol)
         best_sol = copy.deepcopy(sol)
-        curr_sol_paths = [s['path'] for s in curr_sol]
+        curr_sol_paths = [s['path'] for s in self.restore_vehicles_order(curr_sol)]
         best_obj = curr_obj = self.env.evaluate_VRP(curr_sol_paths)/(sum([s['n_nodes'] for s in curr_sol]))
         
         # Temperature of the solution
@@ -698,7 +709,7 @@ class HeuGroup2(Agent):
             self.repair_algos[r]['n'] += 1
             sol_plus = self.repair_algos[r]['func'](sol_minus)
 
-            new_sol_paths = [s['path'] for s in sol_plus]
+            new_sol_paths = [s['path'] for s in self.restore_vehicles_order(sol_plus)]
             new_sol_nnodes = sum([s['n_nodes'] for s in sol_plus])
             new_obj = self.env.evaluate_VRP(new_sol_paths)/new_sol_nnodes
 
@@ -773,7 +784,7 @@ class HeuGroup2(Agent):
                     self.destroy_algos[dd]['p'] = self.destroy_algos[dd]['w']/sum_w_d
 
             # reduce the temperature by applying the "cooling rate"
-            T = T*self.alns_eps
+            T = max(0.0001,T*self.alns_eps)
             i += 1
         
         return best_sol, best_sol_allnodes
@@ -913,7 +924,7 @@ class HeuGroup2(Agent):
         vol_new_n = self.delivery[str(new_n_id)]['vol']
         sum_prev_nodes = sol_k['init_vol'] - sol_k['vol_left']
 
-        return c1 + vol_new_n / (sum_prev_nodes + vol_new_n)
+        return self.beta1_c3*c1 + self.beta2_c3*(vol_new_n / (sum_prev_nodes + vol_new_n))
 
     def compareC2(self, c2_first, c2_second):
         """
@@ -1061,17 +1072,85 @@ class HeuGroup2(Agent):
         # set the chosen_vrp of the delivery to False
         self.delivery[str(n_id)]['chosen_vrp'] = False
 
+    def restore_vehicles_order(self, sol, veh_order=None):
+        final_sol = [None]*len(sol)
+        for k in range(len(sol)):
+            final_sol[self.vehicles_order[k]] = sol[k]
+        return final_sol
+
     def learn_and_save(self):
-        n = 8 # num of iterations to test each parameter
+        n = 10 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 3000
-        alns_N_IwI = 300
+        alns_N_max = 2000
+        alns_N_IwI = 200
+
         
+        # find a good vehicles permutation only during the first
+        # time that learn_and_save() is called from the main.
+        if not self.vehicles_dict:
+            self.vehicles_dict = self.env.get_vehicles()
+            initial_vehicles_dict = self.env.get_vehicles()
+            vehicles_order = list(range(0, len(self.vehicles_dict)))
+            # sort the vehicles based on their "appetibility", defined as:
+            #   (1-cost_veh/sum_costs_vehicles) + vol_veh/sum_vols_vehicles
+            sum_costs_vehicles = sum([v['cost'] for v in self.vehicles_dict])
+            sum_vols_vehicles = sum([v['capacity'] for v in self.vehicles_dict])
+            vehicles_order.sort(key=lambda x:\
+                (1 - self.vehicles_dict[x]['cost']/sum_costs_vehicles) + \
+                    self.vehicles_dict[x]['capacity']/sum_vols_vehicles, 
+                reverse = True)
+            # test various vehicles_dict permutations 
+            veh_all_orders = []
+            ind = -1
+            best_ind = None
+            best_obj = None
+            for i in range(n):
+                veh_order_new = []
+                D = vehicles_order.copy()
+                for k in range(len(vehicles_order)):
+                    y = np.random.uniform()
+                    v = D[int(np.power(y,self.veh_p)*(len(D)-1))]
+                    veh_order_new.append(v)
+                    D.remove(v)
+                # check if the permutation was already generated before
+                if not veh_order_new in veh_all_orders:
+                    # if not, insert it and evaluate the obj function with this permutation
+                    veh_all_orders.append(veh_order_new)
+                    
+                    ind += 1
+                    # translate the permutation into a valid vehicles_dict
+                    new_vehicles_dict = []
+                    for v in veh_order_new:
+                        new_vehicles_dict.append(initial_vehicles_dict[v])
+                    # temporarily save the new permutation as the best one. It is needed 
+                    # to restore the original vehicles scheme when calling evaluate_VRP
+                    self.vehicles_order = veh_order_new                    
+                    self.vehicles_dict = new_vehicles_dict
+                    
+                    id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
+                    remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
+                    VRP_solution = self.compute_VRP(remaining_deliveries, new_vehicles_dict, alns_N_max, alns_N_IwI)
+                    obj = self.env.evaluate_VRP(VRP_solution)
+                    if not best_obj:
+                        best_obj = obj
+                        best_ind = ind
+                    elif obj < best_obj:
+                        best_obj = obj
+                        best_ind = ind
+            # adopt the best permutation found
+            self.vehicles_order = veh_all_orders[best_ind]
+            best_vehicles_dict = []
+            # DEBUG
+            print()
+            print(f"[DEBUG] vehicles order: {veh_all_orders[best_ind]}")
+            for v in veh_all_orders[best_ind]:
+                best_vehicles_dict.append(initial_vehicles_dict[v])
+            self.vehicles_dict = best_vehicles_dict
+
+
         # test volw
-        mu = self.volw
-        sigma = mu/10
-        volw_rnd = np.random.normal(mu, sigma, n-1)
-        volw_rnd = np.insert(volw_rnd, 0, mu)
+        volw_rnd = np.random.uniform(0.5, 3, n-1)
+        volw_rnd = np.insert(volw_rnd, 0, self.volw)
         for i in range(n): 
             self.volw = volw_rnd[i]
             id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
@@ -1081,25 +1160,22 @@ class HeuGroup2(Agent):
             self.data_improv_volw['volw'].append(volw_rnd[i])
             self.data_improv_volw['obj'].append(obj)
 
-        # test alns_rho
-        mu = self.alns_rho
-        sigma = mu/10
-        alns_rho_rnd = np.random.normal(mu, sigma, n-1)
-        alns_rho_rnd = np.insert(alns_rho_rnd, 0, mu)
+        # test beta1_c3
+        beta1_c3_rnd = np.random.uniform(0.5,0.95,n-1)
+        beta1_c3_rnd = np.insert(beta1_c3_rnd, 0, self.beta1_c3)
         for i in range(n): 
-            self.alns_rho = alns_rho_rnd[i]
+            self.beta1_c3 = beta1_c3_rnd[i]
+            self.beta2_c3 = 1-self.beta1_c3
             id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
             VRP_solution = self.compute_VRP(remaining_deliveries, self.env.get_vehicles(), alns_N_max, alns_N_IwI)
             obj = self.env.evaluate_VRP(VRP_solution)
-            self.data_improv_alns_rho['alns_rho'].append(alns_rho_rnd[i])
-            self.data_improv_alns_rho['obj'].append(obj)
+            self.data_improv_beta1_c3['beta1_c3'].append(beta1_c3_rnd[i])
+            self.data_improv_beta1_c3['obj'].append(obj)
         
         # test alns_eps
-        mu = self.alns_eps
-        sigma = mu/10
-        alns_eps_rnd = np.random.normal(mu, sigma, n-1)
-        alns_eps_rnd = np.insert(alns_eps_rnd, 0, mu)
+        alns_eps_rnd = np.random.uniform(0.9,0.99998,n-1)
+        alns_eps_rnd = np.insert(alns_eps_rnd, 0, self.alns_eps)
         for i in range(n): 
             self.alns_eps = alns_eps_rnd[i]
             id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
@@ -1128,10 +1204,11 @@ class HeuGroup2(Agent):
         print()
         print(f"[DEBUG] CHOSEN VOLW: {self.volw}")
         
-        # fix alns_rho
-        alns_rho_pos_min = self.data_improv_alns_rho['obj'].index(min(self.data_improv_alns_rho['obj']))
-        self.alns_rho = self.data_improv_alns_rho['alns_rho'][alns_rho_pos_min]
-        print(f"[DEBUG] CHOSEN alns_rho: {self.alns_rho}")
+        # fix beta1_c3 and beta2_c3
+        beta1_pos_min = self.data_improv_beta1_c3['obj'].index(min(self.data_improv_beta1_c3['obj']))
+        self.beta1_c3 = self.data_improv_beta1_c3['beta1_c3'][beta1_pos_min]
+        self.beta2_c3 = 1-self.beta1_c3
+        print(f"[DEBUG] CHOSEN beta1_c3: {self.beta1_c3}") 
 
         # fix alns_eps
         alns_eps_pos_min = self.data_improv_alns_eps['obj'].index(min(self.data_improv_alns_eps['obj']))
