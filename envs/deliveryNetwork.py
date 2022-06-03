@@ -12,7 +12,7 @@ class DeliveryNetwork():
         self.settings = settings
 
         # Tech Paramenters
-        self.conv_time_to_cost = 1.5
+        self.conv_time_to_cost = settings['conv_time_to_cost']
 
         # Basic cardinalities:
         self.n_deliveries = settings['n_deliveries']

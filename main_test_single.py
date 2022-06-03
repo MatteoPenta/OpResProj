@@ -25,12 +25,12 @@ if __name__ == '__main__':
 
     agent = HeuGroup2(env)
 
-    # TRAIN
+    """ # TRAIN
     for s in range(3):
         env.prepare_crowdsourcing_scenario()
         agent.learn_and_save()
     # STOP TRAINING
-    agent.start_test()
+    agent.start_test() """
     # TEST
     env.prepare_crowdsourcing_scenario()
     id_deliveries_to_crowdship = agent.compute_delivery_to_crowdship(
