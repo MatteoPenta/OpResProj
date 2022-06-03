@@ -206,8 +206,8 @@ class DeliveryNetwork():
         fig = plt.figure()
         # PRINT DELIVERY
         plt.scatter(self.depot[0], self.depot[1], c='green', marker='s')
-        for _, ele in self.delivery_info.items():
-            plt.scatter(ele['lat'], ele['lng'], c='red' if ele['id'] in remaining_deliveries else 'blue')
+        for ele_id, ele in self.delivery_info.items():
+            plt.scatter(ele['lat'], ele['lng'], c='red' if ele_id in remaining_deliveries else 'blue')
             plt.text(ele['lat'], ele['lng'], ele['id'], fontdict=dict(color='black', alpha=0.5, size=16))
         self._add_tour(VRP_solution)
         # if you want to save the picture:

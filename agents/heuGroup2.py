@@ -516,10 +516,12 @@ class HeuGroup2(Agent):
             for d in deliv:
                 n_index = VRP_sol_curr[d[1]].index(d[0]) # index of the node in its vehicle
                 VRP_sol_curr[d[1]].remove(d[0])
+                if VRP_sol_curr[d[1]] == [0,0]: # vehicle became empty
+                    VRP_sol_curr[d[1]] = []
                 # evaluate the cost "gain" obtained by removing the node
                 obj_new = self.env.evaluate_VRP(VRP_sol_curr)
                 df = obj_curr - obj_new
-                sum_vol_nodes = sum([self.delivery[dd]['vol'] for dd in self.delivery if self.delivery[dd]['id'] in VRP_sol_curr[d[1]]])
+                sum_vol_nodes = self.delivery[str(d[0])]['vol'] + sum([self.delivery[dd]['vol'] for dd in self.delivery if self.delivery[dd]['id'] in VRP_sol_curr[d[1]]])
                 c3 = df*self.env.conv_time_to_cost + (self.delivery[str(d[0])]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
                 # compare the insertion cost c3 with the stochastic crowdshipping cost
                 if c3 > self.delivery[str(d[0])]['p_failed']*self.delivery[str(d[0])]['crowd_cost']:
@@ -531,15 +533,21 @@ class HeuGroup2(Agent):
                     y = np.random.uniform()
                     if y >= self.delivery[str(d[0])]['p_failed']: 
                         # crowshipping failed: put the node back into the solution
+                        if not VRP_sol_curr[d[1]]:
+                            VRP_sol_curr[d[1]] = [0,0]
                         VRP_sol_curr[d[1]].insert(n_index, d[0])
+                    else:
+                        obj_curr = obj_new
                 else:
                     # the node shouldn't be proposed for crowdshipping: put it back into the solution
+                    if not VRP_sol_curr[d[1]]:
+                            VRP_sol_curr[d[1]] = [0,0]
                     VRP_sol_curr[d[1]].insert(n_index, d[0])
 
 
         # 3) Propose for crowdshipping those deliveries that were proposed for crowdshipping in the 
         # previous for loop in more than half of the iterations
-        id_to_crowdship = [d[0] for d in deliv if d[2]/n_it >= 0.5]
+        id_to_crowdship = [str(d[0]) for d in deliv if d[2]/n_it >= 0.5]
         
         return id_to_crowdship 
 

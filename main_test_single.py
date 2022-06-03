@@ -46,4 +46,3 @@ if __name__ == '__main__':
     env.render_tour(remaining_deliveries, VRP_solution)
     obj = env.evaluate_VRP(VRP_solution)
     print("obj: ", obj)
-
