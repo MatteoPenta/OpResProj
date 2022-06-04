@@ -599,6 +599,7 @@ class HeuGroup2(Agent):
             alns_N_IwI = self.alns_N_IwI
         best_sol, best_sol_allnodes = self.ALNS_VRP(sol, alns_N_max, alns_N_IwI)
 
+        # TODO delete this part 
         # If a solution containing all the deliveries couldn't be found, 
         # try to insert them in the solution
         if not best_sol_allnodes:
@@ -807,6 +808,7 @@ class HeuGroup2(Agent):
                     # introuced by the destroy/repair algorithms
                     self.delivery = deliv_info_copy
             
+            # TODO Delete this part (or fix it to take crowdshipped deliveries into account)
             if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
                 if not best_sol_allnodes: # still not have a best solution with all nodes
                     best_sol_allnodes = copy.deepcopy(sol_plus)
