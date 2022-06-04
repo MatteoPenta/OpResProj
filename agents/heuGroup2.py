@@ -530,7 +530,7 @@ class HeuGroup2(Agent):
                 else:
                     c3 = df + (self.delivery[str(d[0])]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
                 # compare the insertion cost c3 with the stochastic crowdshipping cost
-                if c3 > self.delivery[str(d[0])]['p_failed']*self.delivery[str(d[0])]['crowd_cost']:
+                if c3 > self.delivery[str(d[0])]['crowd_cost']:
                     # Better to try to crowdship this node. 
                     d[2] += 1 # increment the node's counter
                     # Note that the node is considered
@@ -1210,6 +1210,7 @@ class HeuGroup2(Agent):
                     elif obj < best_obj:
                         best_obj = obj
                         best_ind = ind
+                
             # adopt the best permutation found
             self.vehicles_order = veh_all_orders[best_ind]
             best_vehicles_dict = []
