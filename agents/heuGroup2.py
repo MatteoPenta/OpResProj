@@ -1210,7 +1210,7 @@ class HeuGroup2(Agent):
                     elif obj < best_obj:
                         best_obj = obj
                         best_ind = ind
-                
+                self.veh_p *= 1.5 # decrease the randomness of the vehicle permutation choice
             # adopt the best permutation found
             self.vehicles_order = veh_all_orders[best_ind]
             best_vehicles_dict = []
