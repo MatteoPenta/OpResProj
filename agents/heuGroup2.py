@@ -14,6 +14,8 @@ class HeuGroup2(Agent):
         self.distance_matrix = self.env.distance_matrix
         self.quantile = 1 #DEBUG
         self.delivery = []
+        self.init_sol_created = False
+        self.learning_flag = False
         # note: beta1 + beta2 must be 1 and each of them must be >= 0
         self.beta1_c3 = 0.5
         self.beta2_c3 = 1-self.beta1_c3
@@ -487,17 +489,18 @@ class HeuGroup2(Agent):
         # 1) evaluate the score for all deliveries
         if len(deliveries) == 0:
             return []
-        points = []
         self.delivery = deliveries
-        
+
         vehicles_dict = self.env.get_vehicles()
-        alns_N_max = 2000
-        alns_N_IwI = 200
-        n_it = 5 # num of iterations
+        #alns_N_max = 8000
+        #alns_N_IwI = 800
+        n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
-        VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+        VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles())
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
+        #DEBUG
+        print(f"[DEBUG] OBJ FUNC BEFORE CROWDSHIPPING: {obj_init}")
         # Create a list called "deliv" which contains triplets of the type:
         #    [<node_id>,<vehicle # of the node>,<number of times the node is proposed for crowdshipping>]
         deliv = []
@@ -522,7 +525,10 @@ class HeuGroup2(Agent):
                 obj_new = self.env.evaluate_VRP(VRP_sol_curr)
                 df = obj_curr - obj_new
                 sum_vol_nodes = self.delivery[str(d[0])]['vol'] + sum([self.delivery[dd]['vol'] for dd in self.delivery if self.delivery[dd]['id'] in VRP_sol_curr[d[1]]])
-                c3 = df*self.env.conv_time_to_cost + (self.delivery[str(d[0])]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
+                if VRP_sol_curr[d[1]] == [0,0]: # vehicle became empty
+                    c3 = df
+                else:
+                    c3 = df + (self.delivery[str(d[0])]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
                 # compare the insertion cost c3 with the stochastic crowdshipping cost
                 if c3 > self.delivery[str(d[0])]['p_failed']*self.delivery[str(d[0])]['crowd_cost']:
                     # Better to try to crowdship this node. 
@@ -548,7 +554,7 @@ class HeuGroup2(Agent):
         # 3) Propose for crowdshipping those deliveries that were proposed for crowdshipping in the 
         # previous for loop in more than half of the iterations
         id_to_crowdship = [str(d[0]) for d in deliv if d[2]/n_it >= 0.5]
-        
+
         return id_to_crowdship 
 
     def compute_VRP(self, deliveries_to_do, vehicles_dict, alns_N_max=None, alns_N_IwI=None):
@@ -556,10 +562,33 @@ class HeuGroup2(Agent):
             vehicles_dict = self.vehicles_dict
         
         # DEBUG
-        self.vehicles_order = list(range(0, len(vehicles_dict)))
+        #self.vehicles_order = list(range(0, len(vehicles_dict)))
 
         # Generate an initial feasible solution through the Solomon heuristic
-        sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
+        if not self.learning_flag:
+            if not self.init_sol_created:
+                self.sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
+                sol = self.sol
+                self.init_sol_created= True
+            else:
+                sol = self.sol
+                sol_copy = copy.deepcopy(sol)
+                # remove the nodes that were crowdshipped
+                for v in range(len(sol_copy)):
+                    q = 1
+                    q_copy = 1
+                    if sol_copy[v]['path']:
+                        while sol_copy[v]['path'][q_copy] != 0:
+                            if str(sol_copy[v]['path'][q_copy]) not in deliveries_to_do:
+                                # this node has been crowdshipped: remove it from sol
+                                self.removeNode(sol[v], sol[v]['path'][q], q-1, q+1)
+                                self.delivery[str(sol_copy[v]['path'][q_copy])]['crowdshipped'] = True
+                                self.delivery[str(sol_copy[v]['path'][q_copy])]['chosen_vrp'] = False
+                                q -= 1
+                            q += 1
+                            q_copy += 1
+        else:
+            sol = self.constructiveVRP(deliveries_to_do, vehicles_dict)
         
         # ALNS Implementation
         # Returns the best solution overall in terms of objetive function and the best function found which
@@ -1122,6 +1151,7 @@ class HeuGroup2(Agent):
         return final_sol
 
     def learn_and_save(self):
+        self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
         alns_N_max = 2000
@@ -1239,6 +1269,8 @@ class HeuGroup2(Agent):
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_alns_p['alns_p'].append(alns_p_rnd[i])
             self.data_improv_alns_p['obj'].append(obj)
+
+        self.learning_flag = False
     
     def start_test(self):
         # fix volw
