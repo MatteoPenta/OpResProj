@@ -648,7 +648,8 @@ class HeuGroup2(Agent):
             # Initialize the solution for the k-th vehicle.
             sol.append({'path': [],'arrival_times':[], 'waiting_times': [],
                 'vol_left': vehicles_dict[k]['capacity'], 
-                'init_vol': vehicles_dict[k]['capacity'], 'n_nodes': 0}) 
+                'init_vol': vehicles_dict[k]['capacity'], 'n_nodes': 0,
+                'cost': vehicles_dict[k]['cost']}) 
             
             # add to the solution of this vehicle the closest delivery that:
             #   - is still available 
@@ -966,6 +967,10 @@ class HeuGroup2(Agent):
             :rtype          bool
         """
 
+        #c1 is the sum of two components:
+        #1) the difference of the new arrival time in next and the old arrival time in next
+        #2) the new waiting time in next
+
         prev_n_id = sol_k['path'][prev_n_sol]
         dist_prev_d = self.distance_matrix[prev_n_id, d['id']] # distance between prev_n and d
 
@@ -978,7 +983,9 @@ class HeuGroup2(Agent):
         waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
-        c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol]
+        waiting_time_next = max(0,new_arr_time_next) #new waiting time of next_n_sol
+
+        c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol] + waiting_time_next
         c1 = c1 / new_arr_time_next # normalize c1
 
         return c1
@@ -998,7 +1005,9 @@ class HeuGroup2(Agent):
         vol_new_n = self.delivery[str(new_n_id)]['vol']
         sum_prev_nodes = sol_k['init_vol'] - sol_k['vol_left']
 
-        return self.beta1_c3*c1 + self.beta2_c3*(vol_new_n / (sum_prev_nodes + vol_new_n))
+        return self.beta1_c3*c1*self.env.conv_time_to_cost + \
+             self.beta2_c3*(vol_new_n / (sum_prev_nodes + vol_new_n))*sol_k['cost']
+
 
     def compareC2(self, c2_first, c2_second):
         """
