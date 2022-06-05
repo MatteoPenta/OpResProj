@@ -16,6 +16,8 @@ class HeuGroup2(Agent):
         self.delivery = []
         self.init_sol_created = False
         self.learning_flag = False
+        self.n_crowdshipped = 0 # number of crowdshipped deliveries
+
         # note: beta1 + beta2 must be 1 and each of them must be >= 0
         self.beta1_c3 = 0.5
         self.beta2_c3 = 1-self.beta1_c3
@@ -37,8 +39,6 @@ class HeuGroup2(Agent):
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
         self.alns_p = 2 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
-
-        
 
         self.vehicles_dict = []
         self.vehicles_order = []
@@ -483,6 +483,8 @@ class HeuGroup2(Agent):
         n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
+        #self.init_sol_created = False
+        self.n_crowdshipped = 0
         VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles())
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
         #DEBUG
@@ -571,8 +573,6 @@ class HeuGroup2(Agent):
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['crowdshipped'] = True
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['chosen_vrp'] = False
                                 self.n_crowdshipped += 1
-                                #DEBUG
-                                print("compute_VRP: ",self.n_crowdshipped)
                                 q -= 1
                             q += 1
                             q_copy += 1
@@ -588,16 +588,13 @@ class HeuGroup2(Agent):
             alns_N_IwI = self.alns_N_IwI
         best_sol, best_sol_allnodes = self.ALNS_VRP(sol, alns_N_max, alns_N_IwI)
 
-        # TODO delete this part 
-        # If a solution containing all the deliveries couldn't be found, 
-        # try to insert them in the solution
-
+        # TODO check this part 
+        # If best_sol does NOT contain all the nodes not crowdshipped but a solution containing
+        # ALL nodes has been found in the ALNS, then use the latter as best solution
         '''
-        if not best_sol_allnodes:
-            print("Incomplete solution")
-        else:
-            print("Best sol allnodes")
-            print(best_sol_allnodes)
+        n_nodes_sol = sum([s['n_nodes'] for s in best_sol])
+        if n_nodes_sol < self.env.n_deliveries - self.n_crowdshipped and best_sol_allnodes:
+            best_sol = best_sol_allnodes
         '''
 
         """ for k in range(len(best_sol)):
@@ -610,10 +607,6 @@ class HeuGroup2(Agent):
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
                 print() """ 
-
-
-        # DEBUG
-        print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
 
         # Revert the order of vehicles to the one used in the original scheme
         # then, return the best solution
@@ -750,7 +743,6 @@ class HeuGroup2(Agent):
         return sol
 
     def ALNS_VRP(self, sol, alns_N_max, alns_N_IwI):
-
         # Repair algorithms (ALNS)
         #   'p': probability of the algorithm
         #   'w': weight of the algorithm
@@ -1192,10 +1184,10 @@ class HeuGroup2(Agent):
             #   (1-cost_veh/sum_costs_vehicles) + vol_veh/sum_vols_vehicles
             sum_costs_vehicles = sum([v['cost'] for v in self.vehicles_dict])
             sum_vols_vehicles = sum([v['capacity'] for v in self.vehicles_dict])
-            vehicles_order.sort(key=lambda x:\
+            """ vehicles_order.sort(key=lambda x:\
                 (1 - self.vehicles_dict[x]['cost']/sum_costs_vehicles) + \
                     self.vehicles_dict[x]['capacity']/sum_vols_vehicles, 
-                reverse = True)
+                reverse = True) """
             # test various vehicles_dict permutations 
             veh_all_orders = []
             ind = -1
@@ -1229,16 +1221,15 @@ class HeuGroup2(Agent):
                     VRP_solution = self.compute_VRP(self.env.get_delivery(), new_vehicles_dict, alns_N_max, alns_N_IwI)
                     print(VRP_solution)
                     obj = self.env.evaluate_VRP(VRP_solution)
-                    #DEBUG
-                    print(new_vehicles_dict)
-                    print(obj)
+                    # DEBUG
+                    print(f"Perm: {veh_order_new}, obj: {obj}")
                     if not best_obj:
                         best_obj = obj
                         best_ind = ind
                     elif obj < best_obj:
                         best_obj = obj
                         best_ind = ind
-                self.veh_p *= 1.5 # decrease the randomness of the vehicle permutation choice
+                #self.veh_p *= 1.5 # decrease the randomness of the vehicle permutation choice
             # adopt the best permutation found
             self.vehicles_order = veh_all_orders[best_ind]
             best_vehicles_dict = []
