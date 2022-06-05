@@ -16,6 +16,8 @@ class HeuGroup2(Agent):
         self.delivery = []
         self.init_sol_created = False
         self.learning_flag = False
+        self.n_crowdshipped = 0 # number of crowdshipped deliveries
+
         # note: beta1 + beta2 must be 1 and each of them must be >= 0
         self.beta1_c3 = 0.5
         self.beta2_c3 = 1-self.beta1_c3
@@ -497,6 +499,8 @@ class HeuGroup2(Agent):
         n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
+        self.init_sol_created = False
+        self.n_crowdshipped = 0
         VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles())
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
         #DEBUG
@@ -584,6 +588,7 @@ class HeuGroup2(Agent):
                                 self.removeNode(sol[v], sol[v]['path'][q], q-1, q+1)
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['crowdshipped'] = True
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['chosen_vrp'] = False
+                                self.n_crowdshipped += 1
                                 q -= 1
                             q += 1
                             q_copy += 1
@@ -599,14 +604,12 @@ class HeuGroup2(Agent):
             alns_N_IwI = self.alns_N_IwI
         best_sol, best_sol_allnodes = self.ALNS_VRP(sol, alns_N_max, alns_N_IwI)
 
-        # TODO delete this part 
-        # If a solution containing all the deliveries couldn't be found, 
-        # try to insert them in the solution
-        if not best_sol_allnodes:
-            print("Incomplete solution")
-        else:
-            print("Best sol allnodes")
-            print(best_sol_allnodes)
+        # TODO check this part 
+        # If best_sol does NOT contain all the nodes not crowdshipped but a solution containing
+        # ALL nodes has been found in the ALNS, then use the latter as best solution
+        n_nodes_sol = sum([s['n_nodes'] for s in best_sol])
+        if n_nodes_sol < self.env.n_deliveries - self.n_crowdshipped and best_sol_allnodes:
+            best_sol = best_sol_allnodes
 
         """ for k in range(len(best_sol)):
             # DEBUG
@@ -618,10 +621,6 @@ class HeuGroup2(Agent):
                         print("Node ID\t|\tArrival Time\t|\tWaiting Time\t|\tLower bound\t|\tUpper bound")
                         print(f"{n_id}\t|\t{sol[k]['arrival_times'][n_ind]}\t|\t{sol[k]['waiting_times'][n_ind]}\t|\t{self.delivery[str(n_id)]['time_window_min']}\t|\t{self.delivery[str(n_id)]['time_window_max']}")
                 print() """ 
-
-
-        # DEBUG
-        print(f"Num. of nodes in the solution: {sum([s['n_nodes'] for s in best_sol])}")
 
         # Revert the order of vehicles to the one used in the original scheme
         # then, return the best solution
@@ -810,7 +809,7 @@ class HeuGroup2(Agent):
                     self.delivery = deliv_info_copy
             
             # TODO Delete this part (or fix it to take crowdshipped deliveries into account)
-            if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
+            if new_sol_nnodes == self.env.n_deliveries - self.n_crowdshipped: # the new solution connects all nodes
                 if not best_sol_allnodes: # still not have a best solution with all nodes
                     best_sol_allnodes = copy.deepcopy(sol_plus)
                     best_sol_allnodes_obj = new_obj
