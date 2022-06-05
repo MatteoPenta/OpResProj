@@ -5,7 +5,7 @@ from agents import *
 from scipy import spatial
 import numpy as np
 
-class HeuGroup2(Agent):
+class HeuGroup18(Agent):
 
     def __init__(self, env):
         self.name = "HeuGroup2"
