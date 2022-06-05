@@ -23,9 +23,11 @@ class HeuGroup2(Agent):
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
+        self.n_crowdshipped = 0
+
         # ALNS Parameters
-        self.alns_N_max = 50000 # max number of iterations
-        self.alns_N_IwI = 2000 # max number of iterations without an improvement
+        self.alns_N_max = 5000 # max number of iterations
+        self.alns_N_IwI = 200 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -34,25 +36,9 @@ class HeuGroup2(Agent):
         self.alns_sigma2 = 16 # if the new sol is better than the curr one
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
-        self.alns_p = 1 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
+        self.alns_p = 2 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
-        # Repair algorithms (ALNS)
-        #   'p': probability of the algorithm
-        #   'w': weight of the algorithm
-        #   's': score of the algorithm in the current segment (used to evaluate the weight)
-        #   'n': number of times the algorithm was chosen in the current segment
-        self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
-        }
-
-        # Destroy algorithms (ALNS)
-        self.destroy_algos = {
-            #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
-        }
+        
 
         self.vehicles_dict = []
         self.vehicles_order = []
@@ -584,6 +570,9 @@ class HeuGroup2(Agent):
                                 self.removeNode(sol[v], sol[v]['path'][q], q-1, q+1)
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['crowdshipped'] = True
                                 self.delivery[str(sol_copy[v]['path'][q_copy])]['chosen_vrp'] = False
+                                self.n_crowdshipped += 1
+                                #DEBUG
+                                print("compute_VRP: ",self.n_crowdshipped)
                                 q -= 1
                             q += 1
                             q_copy += 1
@@ -602,11 +591,14 @@ class HeuGroup2(Agent):
         # TODO delete this part 
         # If a solution containing all the deliveries couldn't be found, 
         # try to insert them in the solution
+
+        '''
         if not best_sol_allnodes:
             print("Incomplete solution")
         else:
             print("Best sol allnodes")
             print(best_sol_allnodes)
+        '''
 
         """ for k in range(len(best_sol)):
             # DEBUG
@@ -758,6 +750,25 @@ class HeuGroup2(Agent):
         return sol
 
     def ALNS_VRP(self, sol, alns_N_max, alns_N_IwI):
+
+        # Repair algorithms (ALNS)
+        #   'p': probability of the algorithm
+        #   'w': weight of the algorithm
+        #   's': score of the algorithm in the current segment (used to evaluate the weight)
+        #   'n': number of times the algorithm was chosen in the current segment
+        self.repair_algos = {
+            'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
+        }
+
+        # Destroy algorithms (ALNS)
+        self.destroy_algos = {
+            #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
+        }
+
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
         curr_sol = copy.deepcopy(sol)
         best_sol = copy.deepcopy(sol)
@@ -810,7 +821,9 @@ class HeuGroup2(Agent):
                     self.delivery = deliv_info_copy
             
             # TODO Delete this part (or fix it to take crowdshipped deliveries into account)
-            if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
+            if new_sol_nnodes == self.env.n_deliveries -self.n_crowdshipped: # the new solution connects all nodes
+                #DEBUG
+                #print("ALNS: ",self.n_crowdshipped)
                 if not best_sol_allnodes: # still not have a best solution with all nodes
                     best_sol_allnodes = copy.deepcopy(sol_plus)
                     best_sol_allnodes_obj = new_obj
@@ -1163,10 +1176,10 @@ class HeuGroup2(Agent):
 
     def learn_and_save(self):
         self.learning_flag = True
-        n = 4 # num of iterations to test each parameter
+        n = 8 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 2000
-        alns_N_IwI = 200
+        alns_N_max = 1000
+        alns_N_IwI = 100
 
         
         # find a good vehicles permutation only during the first
@@ -1214,7 +1227,11 @@ class HeuGroup2(Agent):
                     #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
                     #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
                     VRP_solution = self.compute_VRP(self.env.get_delivery(), new_vehicles_dict, alns_N_max, alns_N_IwI)
+                    print(VRP_solution)
                     obj = self.env.evaluate_VRP(VRP_solution)
+                    #DEBUG
+                    print(new_vehicles_dict)
+                    print(obj)
                     if not best_obj:
                         best_obj = obj
                         best_ind = ind
@@ -1232,6 +1249,8 @@ class HeuGroup2(Agent):
                 best_vehicles_dict.append(initial_vehicles_dict[v])
             self.vehicles_dict = best_vehicles_dict
 
+        #DEBUG
+        n = 4
 
         # test volw
         volw_rnd = np.random.uniform(0.5, 3, n-1)
