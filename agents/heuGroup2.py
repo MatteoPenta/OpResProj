@@ -38,24 +38,6 @@ class HeuGroup2(Agent):
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
         self.alns_p = 1 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
-        # Repair algorithms (ALNS)
-        #   'p': probability of the algorithm
-        #   'w': weight of the algorithm
-        #   's': score of the algorithm in the current segment (used to evaluate the weight)
-        #   'n': number of times the algorithm was chosen in the current segment
-        self.repair_algos = {
-            'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
-        }
-
-        # Destroy algorithms (ALNS)
-        self.destroy_algos = {
-            #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
-            'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
-            'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
-        }
-
         self.vehicles_dict = []
         self.vehicles_order = []
         self.veh_p = 1 # degree of "randomness" used in the generation of vehicles permutations
@@ -759,6 +741,24 @@ class HeuGroup2(Agent):
         return sol
 
     def ALNS_VRP(self, sol, alns_N_max, alns_N_IwI):
+        # Repair algorithms (ALNS)
+        #   'p': probability of the algorithm
+        #   'w': weight of the algorithm
+        #   's': score of the algorithm in the current segment (used to evaluate the weight)
+        #   'n': number of times the algorithm was chosen in the current segment
+        self.repair_algos = {
+            'greedy': {'func': self.alns_repair_greedy, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'regret': {'func': self.alns_repair_regret, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            #'random': {'func': self.alns_repair_rand_choice, 'p': 0.33, 'w': 1, 's': 0, 'n': 0}
+        }
+
+        # Destroy algorithms (ALNS)
+        self.destroy_algos = {
+            #'shaw': {'func': self.alns_destroy_shaw, 'p': 0.33, 'w': 1, 's': 0, 'n': 0},
+            'worst': {'func': self.alns_destroy_worst, 'p': 0.5, 'w': 1, 's': 0, 'n': 0},
+            'random': {'func': self.alns_destroy_random, 'p': 0.5, 'w': 1, 's': 0, 'n': 0}
+        }
+
         best_sol_allnodes = [] # keep track of the best solution with ALL nodes connected
         curr_sol = copy.deepcopy(sol)
         best_sol = copy.deepcopy(sol)
