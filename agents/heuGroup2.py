@@ -26,8 +26,8 @@ class HeuGroup2(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 50000 # max number of iterations
-        self.alns_N_IwI = 2000 # max number of iterations without an improvement
+        self.alns_N_max = 10000 # max number of iterations
+        self.alns_N_IwI = 5000 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -1164,7 +1164,7 @@ class HeuGroup2(Agent):
 
     def learn_and_save(self):
         self.learning_flag = True
-        n = 8 # num of iterations to test each parameter
+        n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
         alns_N_max = 2000
         alns_N_IwI = 200
@@ -1189,7 +1189,7 @@ class HeuGroup2(Agent):
             ind = -1
             best_ind = None
             best_obj = None
-            for i in range(n):
+            for i in range(2*n):
                 veh_order_new = []
                 D = vehicles_order.copy()
                 for k in range(len(vehicles_order)):
