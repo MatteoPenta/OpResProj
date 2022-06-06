@@ -397,17 +397,6 @@ class HeuGroup18(Agent):
 
         return sol
                         
-    def alns_repair_random(self, sol):
-        print("Greedy ALNS")
-
-    def alns_destroy_shaw(self, sol):
-        """
-        Remove q nodes from the solution by applying the Shaw Removal Heuristic,
-        which tries to remove cluster of deliveries which have similar characteristics
-        so that they can be easily exchanged.
-        """
-        print("Shaw heuristic")
-    
     def alns_destroy_worst(self, sol):
         """
         Remove q nodes from the solution. The node removed in each one of the q 
