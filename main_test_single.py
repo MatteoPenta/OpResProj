@@ -5,11 +5,11 @@ from agents import exactVRPAgent
 import numpy as np
 from envs.deliveryNetwork import DeliveryNetwork
 from agents.exactVRPAgent import ExactVRPAgent
-from agents.heuGroup2 import HeuGroup2
+from agents.heuGroup18 import HeuGroup18
 
 
 if __name__ == '__main__':
-    np.random.seed(221)
+    np.random.seed(10)
     log_name = "./logs/main_test_single.log"
     logging.basicConfig(
         filename=log_name,
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     env = DeliveryNetwork(settings, "./data/delivery_info.json", "./data/distance_matrix.csv")
 
-    agent = HeuGroup2(env)
+    agent = ExactVRPAgent(env)
 
     # TRAIN
     for s in range(3):

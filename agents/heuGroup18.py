@@ -5,14 +5,14 @@ from agents import *
 from scipy import spatial
 import numpy as np
 
-class HeuGroup2(Agent):
+class HeuGroup18(Agent):
 
     def __init__(self, env):
         self.name = "HeuGroup2"
         self.env = env
         # evaluate the distance matrix
         self.distance_matrix = self.env.distance_matrix
-        self.quantile = 1 #DEBUG
+        self.quantile = 1 # TODO remove
         self.delivery = []
         self.init_sol_created = False
         self.learning_flag = False
@@ -211,8 +211,9 @@ class HeuGroup2(Agent):
     def alns_repair_regret(self, sol):
         """
         Insert as many nodes as possible in the solution. 
-        At each of the q iterations, the node whose "regret value"
+        In each iteration, the node whose "regret value"
         is the highest will be inserted in the minimum cost position.
+        The insertions go on until no more feasible insertions are found.
         In the regret-2 implementation, the regret value is defined as
         the cost difference between inserting the node in the second 
         best solution compared to the best solution.
@@ -399,17 +400,6 @@ class HeuGroup2(Agent):
 
         return sol
                         
-    def alns_repair_random(self, sol):
-        print("Greedy ALNS")
-
-    def alns_destroy_shaw(self, sol):
-        """
-        Remove q nodes from the solution by applying the Shaw Removal Heuristic,
-        which tries to remove cluster of deliveries which have similar characteristics
-        so that they can be easily exchanged.
-        """
-        print("Shaw heuristic")
-    
     def alns_destroy_worst(self, sol):
         """
         Remove q nodes from the solution. The node removed in each one of the q 
@@ -988,7 +978,10 @@ class HeuGroup2(Agent):
         waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
-        waiting_time_next = max(0,new_arr_time_next) #new waiting time of next_n_sol
+        if next_n_id == 0:
+            waiting_time_next = 0
+        else:
+            waiting_time_next = max(0,self.delivery[str(next_n_id)]['time_window_min'] - new_arr_time_next) #new waiting time of next_n_sol
 
         c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol] + waiting_time_next
         c1 = c1 / new_arr_time_next # normalize c1
@@ -1168,7 +1161,7 @@ class HeuGroup2(Agent):
 
     def learn_and_save(self):
         self.learning_flag = True
-        n = 8 # num of iterations to test each parameter
+        n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
         alns_N_max = 1000
         alns_N_IwI = 100
@@ -1193,7 +1186,7 @@ class HeuGroup2(Agent):
             ind = -1
             best_ind = None
             best_obj = None
-            for i in range(n):
+            for i in range(2*n):
                 veh_order_new = []
                 D = vehicles_order.copy()
                 for k in range(len(vehicles_order)):
