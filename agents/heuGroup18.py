@@ -35,7 +35,7 @@ class HeuGroup18(Agent):
         self.alns_sigma2 = 16 # if the new sol is better than the curr one
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
-        self.alns_p = 2 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
+        self.alns_p = 1 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
         self.vehicles_dict = []
         self.vehicles_order = []
@@ -1160,8 +1160,8 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 2000
-        alns_N_IwI = 200
+        alns_N_max = 1000
+        alns_N_IwI = 100
 
         
         # find a good vehicles permutation only during the first
@@ -1174,10 +1174,10 @@ class HeuGroup18(Agent):
             #   (1-cost_veh/sum_costs_vehicles) + vol_veh/sum_vols_vehicles
             sum_costs_vehicles = sum([v['cost'] for v in self.vehicles_dict])
             sum_vols_vehicles = sum([v['capacity'] for v in self.vehicles_dict])
-            """ vehicles_order.sort(key=lambda x:\
+            vehicles_order.sort(key=lambda x:\
                 (1 - self.vehicles_dict[x]['cost']/sum_costs_vehicles) + \
                     self.vehicles_dict[x]['capacity']/sum_vols_vehicles, 
-                reverse = True) """
+                reverse = True)
             # test various vehicles_dict permutations 
             veh_all_orders = []
             ind = -1
@@ -1209,7 +1209,6 @@ class HeuGroup18(Agent):
                     #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
                     #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
                     VRP_solution = self.compute_VRP(self.env.get_delivery(), new_vehicles_dict, alns_N_max, alns_N_IwI)
-                    print(VRP_solution)
                     obj = self.env.evaluate_VRP(VRP_solution)
                     # DEBUG
                     print(f"Perm: {veh_order_new}, obj: {obj}")
@@ -1219,7 +1218,7 @@ class HeuGroup18(Agent):
                     elif obj < best_obj:
                         best_obj = obj
                         best_ind = ind
-                #self.veh_p *= 1.5 # decrease the randomness of the vehicle permutation choice
+                self.veh_p *= 1.2 # decrease the randomness of the vehicle permutation choice
             # adopt the best permutation found
             self.vehicles_order = veh_all_orders[best_ind]
             best_vehicles_dict = []
