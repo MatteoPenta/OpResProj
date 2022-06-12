@@ -24,9 +24,11 @@ class HeuGroup18(Agent):
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
+        self.n_crowdshipped = 0
+
         # ALNS Parameters
-        self.alns_N_max = 10000 # max number of iterations
-        self.alns_N_IwI = 5000 # max number of iterations without an improvement
+        self.alns_N_max = 5000 # max number of iterations
+        self.alns_N_IwI = 200 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -35,7 +37,7 @@ class HeuGroup18(Agent):
         self.alns_sigma2 = 16 # if the new sol is better than the curr one
         self.alns_sigma3 = 13 # if the new sol is NOT better than the curr one but it is chosen
         self.alns_rho = 0.1 # "reaction factor" used to update the weights of the operators
-        self.alns_p = 1 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
+        self.alns_p = 2 # degree of "randomness" used in the alns algorithms. p >= 1. p = 1: random choice
 
         self.vehicles_dict = []
         self.vehicles_order = []
@@ -800,7 +802,9 @@ class HeuGroup18(Agent):
                     self.delivery = deliv_info_copy
             
             # TODO Delete this part (or fix it to take crowdshipped deliveries into account)
-            if new_sol_nnodes == self.env.n_deliveries: # the new solution connects all nodes
+            if new_sol_nnodes == self.env.n_deliveries -self.n_crowdshipped: # the new solution connects all nodes
+                #DEBUG
+                #print("ALNS: ",self.n_crowdshipped)
                 if not best_sol_allnodes: # still not have a best solution with all nodes
                     best_sol_allnodes = copy.deepcopy(sol_plus)
                     best_sol_allnodes_obj = new_obj
@@ -1158,8 +1162,8 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 2000
-        alns_N_IwI = 200
+        alns_N_max = 1000
+        alns_N_IwI = 100
 
         
         # find a good vehicles permutation only during the first
@@ -1207,6 +1211,7 @@ class HeuGroup18(Agent):
                     #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
                     #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
                     VRP_solution = self.compute_VRP(self.env.get_delivery(), new_vehicles_dict, alns_N_max, alns_N_IwI)
+                    print(VRP_solution)
                     obj = self.env.evaluate_VRP(VRP_solution)
                     # DEBUG
                     print(f"Perm: {veh_order_new}, obj: {obj}")
@@ -1227,6 +1232,8 @@ class HeuGroup18(Agent):
                 best_vehicles_dict.append(initial_vehicles_dict[v])
             self.vehicles_dict = best_vehicles_dict
 
+        #DEBUG
+        n = 4
 
         # test volw
         volw_rnd = np.random.uniform(0.5, 3, n-1)

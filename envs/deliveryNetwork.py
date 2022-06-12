@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import math
-from itsdangerous import json
+import json
 import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
@@ -97,6 +97,8 @@ class DeliveryNetwork():
         for _, ele in self.delivery_info.items():
             if np.random.uniform() < ele['p_failed']:
                 self.__fail_crowdship.append(ele['id'])
+        if 62 not in self.__fail_crowdship:
+            self.__fail_crowdship.append(62)
 
     def run_crowdsourcing(self, delivery_to_crowdship):
         id_remaining_deliveries = [key for key in self.delivery_info]
