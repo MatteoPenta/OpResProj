@@ -12,7 +12,6 @@ class HeuGroup18(Agent):
         self.env = env
         # evaluate the distance matrix
         self.distance_matrix = self.env.distance_matrix
-        self.quantile = 1 # TODO remove
         self.delivery = []
         self.init_sol_created = False
         self.learning_flag = False
