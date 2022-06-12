@@ -24,11 +24,9 @@ class HeuGroup18(Agent):
         self.lambda_vrp = 1
         self.volw = 1 # weight associated to the volume of the delivery
 
-        self.n_crowdshipped = 0
-
         # ALNS Parameters
-        self.alns_N_max = 5000 # max number of iterations
-        self.alns_N_IwI = 200 # max number of iterations without an improvement
+        self.alns_N_max = 10000 # max number of iterations
+        self.alns_N_IwI = 5000 # max number of iterations without an improvement
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -1162,8 +1160,8 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 1000
-        alns_N_IwI = 100
+        alns_N_max = 2000
+        alns_N_IwI = 200
 
         
         # find a good vehicles permutation only during the first
@@ -1231,9 +1229,6 @@ class HeuGroup18(Agent):
             for v in veh_all_orders[best_ind]:
                 best_vehicles_dict.append(initial_vehicles_dict[v])
             self.vehicles_dict = best_vehicles_dict
-
-        #DEBUG
-        n = 4
 
         # test volw
         volw_rnd = np.random.uniform(0.5, 3, n-1)
