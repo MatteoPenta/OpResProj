@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     env = DeliveryNetwork(settings, "./data/delivery_info.json", "./data/distance_matrix.csv")
 
-    agent = HeuGroup18(env)
+    agent = ExactVRPAgent(env)
 
     # TRAIN
     for s in range(3):

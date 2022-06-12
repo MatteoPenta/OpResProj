@@ -30,7 +30,7 @@ class ExactVRPAgent(Agent):
         id_to_crowdship = []
         for i in range(len(distance_matrix[0, :])):
             if distance_matrix[0, i] > threshold:
-                id_to_crowdship.append(i)
+                id_to_crowdship.append(str(i))
 
         return id_to_crowdship 
 

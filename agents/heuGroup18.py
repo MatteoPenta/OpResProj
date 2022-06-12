@@ -12,7 +12,7 @@ class HeuGroup18(Agent):
         self.env = env
         # evaluate the distance matrix
         self.distance_matrix = self.env.distance_matrix
-        self.quantile = 1 #DEBUG
+        self.quantile = 1 # TODO remove
         self.delivery = []
         self.init_sol_created = False
         self.learning_flag = False
@@ -209,8 +209,9 @@ class HeuGroup18(Agent):
     def alns_repair_regret(self, sol):
         """
         Insert as many nodes as possible in the solution. 
-        At each of the q iterations, the node whose "regret value"
+        In each iteration, the node whose "regret value"
         is the highest will be inserted in the minimum cost position.
+        The insertions go on until no more feasible insertions are found.
         In the regret-2 implementation, the regret value is defined as
         the cost difference between inserting the node in the second 
         best solution compared to the best solution.
@@ -973,7 +974,10 @@ class HeuGroup18(Agent):
         waiting_time_d = max(0, d['time_window_min'] - arr_time_d)
         new_arr_time_next = arr_time_d + waiting_time_d + dist_d_next
 
-        waiting_time_next = max(0,new_arr_time_next) #new waiting time of next_n_sol
+        if next_n_id == 0:
+            waiting_time_next = 0
+        else:
+            waiting_time_next = max(0,self.delivery[str(next_n_id)]['time_window_min'] - new_arr_time_next) #new waiting time of next_n_sol
 
         c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol] + waiting_time_next
         c1 = c1 / new_arr_time_next # normalize c1
