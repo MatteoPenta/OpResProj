@@ -17,7 +17,7 @@ if __name__ == '__main__':
         level=logging.INFO, datefmt="%H:%M:%S",
         filemode='w'
     )
-    fp = open("./cfg/setting_1.json", 'r')
+    fp = open("./cfg/setting_2.json", 'r')
     settings = json.load(fp)
     fp.close()
 
