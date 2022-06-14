@@ -8,7 +8,7 @@ import numpy as np
 class HeuGroup18(Agent):
 
     def __init__(self, env):
-        self.name = "HeuGroup2"
+        self.name = "HeuGroup18"
         self.env = env
         # evaluate the distance matrix
         self.distance_matrix = self.env.distance_matrix
@@ -362,25 +362,25 @@ class HeuGroup18(Agent):
                                                     d['id'],
                                                     c3
                                                 ]
-                                
-                if not second_best_ins_d:
-                    if not one_vehicle_flag:
-                        one_vehicle_flag = True
-                        best_ins_regretval = best_ins_d.copy()
-                    else: # not the first node which has only one vehicle where it can be inserted
-                        # Solve the tie by comparing the c3 values
-                        if best_ins_d[5] < best_ins_regretval[5]:
+                if best_ins_d:               
+                    if not second_best_ins_d:
+                        if not one_vehicle_flag:
+                            one_vehicle_flag = True
                             best_ins_regretval = best_ins_d.copy()
-                else: # nodes which can be inserted in (at least) two vehicles
-                    if not one_vehicle_flag:
-                        # Evaluate the regret value
-                        regretval = second_best_ins_d[5] - best_ins_d[5]
-                        if not best_ins_regretval:
-                            best_ins_regretval = best_ins_d.copy()
-                            best_regretval = regretval
-                        elif regretval > best_regretval:
-                            best_ins_regretval = best_ins_d.copy()
-                            best_regretval = regretval
+                        else: # not the first node which has only one vehicle where it can be inserted
+                            # Solve the tie by comparing the c3 values
+                            if best_ins_d[5] < best_ins_regretval[5]:
+                                best_ins_regretval = best_ins_d.copy()
+                    else: # nodes which can be inserted in (at least) two vehicles
+                        if not one_vehicle_flag:
+                            # Evaluate the regret value
+                            regretval = second_best_ins_d[5] - best_ins_d[5]
+                            if not best_ins_regretval:
+                                best_ins_regretval = best_ins_d.copy()
+                                best_regretval = regretval
+                            elif regretval > best_regretval:
+                                best_ins_regretval = best_ins_d.copy()
+                                best_regretval = regretval
 
             # all nodes have been considered...
             if best_ins_regretval:
@@ -470,7 +470,6 @@ class HeuGroup18(Agent):
         n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
-        #self.init_sol_created = False
         self.n_crowdshipped = 0
         VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles())
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
@@ -1161,7 +1160,7 @@ class HeuGroup18(Agent):
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
         alns_N_max = 1000
-        alns_N_IwI = 100
+        alns_N_IwI = 300
 
         
         # find a good vehicles permutation only during the first
@@ -1170,7 +1169,7 @@ class HeuGroup18(Agent):
             self.vehicles_dict = self.env.get_vehicles()
             initial_vehicles_dict = self.env.get_vehicles()
             vehicles_order = list(range(0, len(self.vehicles_dict)))
-            # sort the vehicles based on their "appetibility", defined as:
+            # sort the vehicles based on their "desirability", defined as:
             #   (1-cost_veh/sum_costs_vehicles) + vol_veh/sum_vols_vehicles
             sum_costs_vehicles = sum([v['cost'] for v in self.vehicles_dict])
             sum_vols_vehicles = sum([v['capacity'] for v in self.vehicles_dict])

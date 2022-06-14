@@ -102,7 +102,7 @@ class ExactVRPAgent(Agent):
             nodes_idx.append(ele['id'])
             delivery_idx.append(ele['id'])
 
-        distance_matrix = spatial.distance_matrix(points, points)
+        distance_matrix = self.env.distance_matrix
 
         # distance_matrix = self.distance_matrix[np.ix_(nodes_id, nodes_id)]
 
@@ -153,7 +153,7 @@ class ExactVRPAgent(Agent):
         # CAPACITY LIMIT
         self.model.addConstrs(
             (grb.quicksum(
-                delivery_to_do[delivery_idx[str(i)]]['vol'] * Z[i, k]
+                delivery_to_do[str(delivery_idx[i])]['vol'] * Z[i, k]
                 for i in deliveries
             ) <= vehicles_dict[k]['capacity'] for k in vehicles),
             name='initial_inventory'
@@ -202,11 +202,11 @@ class ExactVRPAgent(Agent):
         )
 
         self.model.addConstrs(
-            (T[i + 1] >= delivery_to_do[delivery_idx[str(i)]]['time_window_min']  for i in deliveries),
+            (T[i + 1] >= delivery_to_do[str(delivery_idx[i])]['time_window_min']  for i in deliveries),
             name='initial_time_bound'
         )
         self.model.addConstrs(
-            (T[i + 1] <= delivery_to_do[delivery_idx[str(i)]]['time_window_max']  for i in deliveries),
+            (T[i + 1] <= delivery_to_do[str(delivery_idx[i])]['time_window_max']  for i in deliveries),
             name='initial_time_bound'
         )
 
