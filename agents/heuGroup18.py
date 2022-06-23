@@ -418,7 +418,7 @@ class HeuGroup18(Agent):
                             self.getC1(
                                 sol[x[1]],
                                 sol[x[1]]['path'].index(x[0])-1,
-                                self.delivery[str(x[0])],
+                                self.delivery[x[0]],
                                 sol[x[1]]['path'].index(x[0])+1
                             ),
                             0,
@@ -495,20 +495,20 @@ class HeuGroup18(Agent):
                 # evaluate the cost "gain" obtained by removing the node
                 obj_new = self.env.evaluate_VRP(VRP_sol_curr)
                 df = obj_curr - obj_new
-                sum_vol_nodes = self.delivery[str(d[0])]['vol'] + sum([self.delivery[dd]['vol'] for dd in self.delivery if self.delivery[dd]['id'] in VRP_sol_curr[d[1]]])
+                sum_vol_nodes = self.delivery[d[0]]['vol'] + sum([self.delivery[dd]['vol'] for dd in self.delivery if self.delivery[dd]['id'] in VRP_sol_curr[d[1]]])
                 if VRP_sol_curr[d[1]] == [0,0]: # vehicle became empty
                     c3 = df
                 else:
-                    c3 = df + (self.delivery[str(d[0])]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
+                    c3 = df + (self.delivery[d[0]]['vol']/sum_vol_nodes)*vehicles_dict[d[1]]['cost']
                 # compare the insertion cost c3 with the stochastic crowdshipping cost
-                if c3 > self.delivery[str(d[0])]['crowd_cost']:
+                if c3 > self.delivery[d[0]]['crowd_cost']:
                     # Better to try to crowdship this node. 
                     d[2] += 1 # increment the node's counter
                     # Note that the node is considered
                     # as crowdshipped by comparing a randomly chosen probability with the p_failed
                     # of such node.
                     y = np.random.uniform()
-                    if y >= self.delivery[str(d[0])]['p_failed']: 
+                    if y >= self.delivery[d[0]]['p_failed']: 
                         # crowshipping failed: put the node back into the solution
                         if not VRP_sol_curr[d[1]]:
                             VRP_sol_curr[d[1]] = [0,0]
@@ -524,7 +524,7 @@ class HeuGroup18(Agent):
 
         # 3) Propose for crowdshipping those deliveries that were proposed for crowdshipping in the 
         # previous for loop in more than half of the iterations
-        id_to_crowdship = [str(d[0]) for d in deliv if d[2]/n_it >= 0.5]
+        id_to_crowdship = [d[0] for d in deliv if d[2]/n_it >= 0.5]
 
         return id_to_crowdship 
 
@@ -565,11 +565,11 @@ class HeuGroup18(Agent):
                     q_copy = 1
                     if sol_copy[v]['path']:
                         while sol_copy[v]['path'][q_copy] != 0:
-                            if str(sol_copy[v]['path'][q_copy]) not in deliveries_to_do:
+                            if sol_copy[v]['path'][q_copy] not in deliveries_to_do:
                                 # this node has been crowdshipped: remove it from sol
                                 self.removeNode(sol[v], sol[v]['path'][q], q-1, q+1)
-                                self.delivery[str(sol_copy[v]['path'][q_copy])]['crowdshipped'] = True
-                                self.delivery[str(sol_copy[v]['path'][q_copy])]['chosen_vrp'] = False
+                                self.delivery[sol_copy[v]['path'][q_copy]]['crowdshipped'] = True
+                                self.delivery[sol_copy[v]['path'][q_copy]]['chosen_vrp'] = False
                                 self.n_crowdshipped += 1
                                 q -= 1
                             q += 1
@@ -914,7 +914,7 @@ class HeuGroup18(Agent):
                 # If PF == 0: time feasibility is guaranteed from this point on. Return true
                 # If PF + arrival time exceeds the time window upper bound, return False
                 next_n_id = sol_k['path'][next_n_sol]
-                next_n_timeupperbound = self.delivery[str(next_n_id)]['time_window_max']
+                next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
                 if PF == 0:
                     return True
 
@@ -977,7 +977,7 @@ class HeuGroup18(Agent):
         if next_n_id == 0:
             waiting_time_next = 0
         else:
-            waiting_time_next = max(0,self.delivery[str(next_n_id)]['time_window_min'] - new_arr_time_next) #new waiting time of next_n_sol
+            waiting_time_next = max(0,self.delivery[next_n_id]['time_window_min'] - new_arr_time_next) #new waiting time of next_n_sol
 
         c1 = new_arr_time_next - sol_k['arrival_times'][next_n_sol] + waiting_time_next
         c1 = c1 / new_arr_time_next # normalize c1
@@ -1030,7 +1030,7 @@ class HeuGroup18(Agent):
 
         c1 = best_pos_ve_k[2]
         new_n_id = best_pos_ve_k[4]
-        vol_new_n = self.delivery[str(new_n_id)]['vol']
+        vol_new_n = self.delivery[new_n_id]['vol']
         sum_prev_nodes = sol_k['init_vol'] - sol_k['vol_left']
 
         return self.beta1_c3*c1*self.env.conv_time_to_cost + \
@@ -1049,7 +1049,7 @@ class HeuGroup18(Agent):
         """
         best_d = [None, 0] # [<id>, <c2>]
         for d_id in best_pos_all:
-            c2_d = self.getC2(self.delivery[str(d_id)], best_pos_all[d_id][2])
+            c2_d = self.getC2(self.delivery[d_id], best_pos_all[d_id][2])
 
             # compare the cost c2 of the currently selected delivery "d_id"
             # with the optimum one. Update the optimum if better.
@@ -1106,7 +1106,7 @@ class HeuGroup18(Agent):
         arr_time_d = sol_k['arrival_times'][prev_n_sol] + \
             sol_k['waiting_times'][prev_n_sol] + \
                 dist_prev_d
-        waiting_time_d = max(0, self.delivery[str(best_d_id)]['time_window_min'] - arr_time_d)
+        waiting_time_d = max(0, self.delivery[best_d_id]['time_window_min'] - arr_time_d)
         sol_k['arrival_times'].insert(prev_n_sol+1, arr_time_d)
         sol_k['waiting_times'].insert(prev_n_sol+1, waiting_time_d)
 
@@ -1122,8 +1122,8 @@ class HeuGroup18(Agent):
             # Update the arrival time at next_n
             sol_k['arrival_times'][next_n_sol] = new_arr_time_next
             if next_n_sol != len(sol_k['path'])-1: # NOT the depot
-                delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[str(next_n_id)]['time_window_min'])
-                arr_time_relative = self.delivery[str(next_n_id)]['time_window_min']-new_arr_time_next
+                delta_arr_time_next = new_arr_time_next - max(old_arr_time_next, self.delivery[next_n_id]['time_window_min'])
+                arr_time_relative = self.delivery[next_n_id]['time_window_min']-new_arr_time_next
                 sol_k['waiting_times'][next_n_sol] = max(0, arr_time_relative)
                 if arr_time_relative < 0: # if the arrival at next_n is after the lower bound of its time window
                     # Update the arrival time at the delivery after "next_n" taking into consideration
@@ -1138,11 +1138,11 @@ class HeuGroup18(Agent):
                 next_n_sol +=1
         
         # 4) update the volume left in the vehicle
-        sol_k['vol_left'] -= self.delivery[str(best_d_id)]['vol']
+        sol_k['vol_left'] -= self.delivery[best_d_id]['vol']
         # 5) increment the number of nodes in the vehicle
         sol_k['n_nodes'] += 1
         # 6) set the chosen_vrp of the delivery to True
-        self.delivery[str(best_d_id)]['chosen_vrp'] = True
+        self.delivery[best_d_id]['chosen_vrp'] = True
 
     def removeNode(self, sol_k, n_id, prev_n_sol, next_n_sol):
         """
@@ -1196,9 +1196,9 @@ class HeuGroup18(Agent):
                 sol_k['arrival_times'][next_n_sol] = new_arr_time_next
                 if next_n_sol != len(sol_k['path'])-1: # NOT the depot
                     # difference in the arrival time at the FOLLOWING node w.r.t. next_n
-                    delta_arr_time_next = old_arr_time_next - max(self.delivery[str(next_n_id)]['time_window_min'], new_arr_time_next)
-                    sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[str(next_n_id)]['time_window_min'] - new_arr_time_next)
-                    if old_arr_time_next > self.delivery[str(next_n_id)]['time_window_min']: 
+                    delta_arr_time_next = old_arr_time_next - max(self.delivery[next_n_id]['time_window_min'], new_arr_time_next)
+                    sol_k['waiting_times'][next_n_sol] = max(0, self.delivery[next_n_id]['time_window_min'] - new_arr_time_next)
+                    if old_arr_time_next > self.delivery[next_n_id]['time_window_min']: 
                         # the following deliveries have to be updated
                         next_n_sol +=1
                         if next_n_sol < len(sol_k['path']):
@@ -1210,9 +1210,9 @@ class HeuGroup18(Agent):
                     next_n_sol += 1
 
         # update the volume left in the vehicle
-        sol_k['vol_left'] += self.delivery[str(n_id)]['vol']
+        sol_k['vol_left'] += self.delivery[n_id]['vol']
         # set the chosen_vrp of the delivery to False
-        self.delivery[str(n_id)]['chosen_vrp'] = False
+        self.delivery[n_id]['chosen_vrp'] = False
 
     def restore_vehicles_order(self, sol):
         """

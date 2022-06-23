@@ -25,6 +25,13 @@ class DeliveryNetwork():
         if data_csv:
             file1 = open(data_csv, 'r')
             self.delivery_info = json.load(file1)
+
+            temp_del_info = {}
+            for k in self.delivery_info:
+                v = self.delivery_info[k]
+                temp_del_info[int(k)] = v
+            self.delivery_info = temp_del_info
+
             file1.close()
             '''
             lines = file1.readlines()
@@ -159,9 +166,9 @@ class DeliveryNetwork():
                     VRP_solution[k][i],
                 ]
                 tour_time = max(
-                    tour_time, self.delivery_info[str(VRP_solution[k][i])]['time_window_min']
+                    tour_time, self.delivery_info[VRP_solution[k][i]]['time_window_min']
                 )
-                if tour_time > self.delivery_info[str(VRP_solution[k][i])]['time_window_max']:
+                if tour_time > self.delivery_info[VRP_solution[k][i]]['time_window_max']:
                     raise Exception('Too Late for Delivery: ', VRP_solution[k][i])
             travel_cost += self.conv_time_to_cost * tour_time
 
@@ -169,7 +176,7 @@ class DeliveryNetwork():
         for k in range(self.n_vehicles):
             tot_vol_used = 0
             for i in range(1, len(VRP_solution[k]) - 1):
-                tot_vol_used += self.delivery_info[str(VRP_solution[k][i])]['vol']
+                tot_vol_used += self.delivery_info[VRP_solution[k][i]]['vol']
 
             if tot_vol_used > self.vehicles[k]['capacity']:
                 raise Exception(f"Capacity Bound Violeted {tot_vol_used}>{self.vehicles[k]['capacity']}")
@@ -193,7 +200,7 @@ class DeliveryNetwork():
                     VRP_solution[k][i - 1],
                     VRP_solution[k][i],
                 ]
-                delivery = self.delivery_info[str(VRP_solution[k][i])]
+                delivery = self.delivery_info[VRP_solution[k][i]]
                 tour_time_after_waiting = max(
                     tour_time,
                     delivery['time_window_min']
@@ -233,18 +240,18 @@ class DeliveryNetwork():
             if len(VRP_solution[k]) == 0:
                 continue
             plt.plot(
-                [self.depot[0], self.delivery_info[str(VRP_solution[k][1])]['lat']],
-                [self.depot[1], self.delivery_info[str(VRP_solution[k][1])]['lng']],
+                [self.depot[0], self.delivery_info[VRP_solution[k][1]]['lat']],
+                [self.depot[1], self.delivery_info[VRP_solution[k][1]]['lng']],
                 color=dict_vehicle_char[k][0]
             )
             for i in range(1, len(VRP_solution[k])-2):
                 plt.plot(
-                    [self.delivery_info[str(VRP_solution[k][i])]['lat'], self.delivery_info[str(VRP_solution[k][i + 1])]['lat']],
-                    [self.delivery_info[str(VRP_solution[k][i])]['lng'], self.delivery_info[str(VRP_solution[k][i + 1])]['lng']],
+                    [self.delivery_info[VRP_solution[k][i]]['lat'], self.delivery_info[VRP_solution[k][i + 1]]['lat']],
+                    [self.delivery_info[VRP_solution[k][i]]['lng'], self.delivery_info[VRP_solution[k][i + 1]]['lng']],
                     color=dict_vehicle_char[k][0]
                 )
             plt.plot(
-                [self.delivery_info[str(VRP_solution[k][-2])]['lat'], self.depot[0]],
-                [self.delivery_info[str(VRP_solution[k][-2])]['lng'], self.depot[1]],
+                [self.delivery_info[VRP_solution[k][-2]]['lat'], self.depot[0]],
+                [self.delivery_info[VRP_solution[k][-2]]['lng'], self.depot[1]],
                 color=dict_vehicle_char[k][0]
             )
