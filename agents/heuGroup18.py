@@ -25,7 +25,7 @@ class HeuGroup18(Agent):
 
         # ALNS Parameters
         self.alns_N_max = (100*8000)/self.env.n_deliveries # max number of iterations
-        self.alns_N_IwI = self.alns_N_max/2 # max number of iterations without an improvement
+        self.alns_N_IwI = self.alns_N_max/1.5 # max number of iterations without an improvement
         #self.alns_N_max = 10000 
         #self.alns_N_IwI = 5000 
         self.alns_N_s = 50 # number of iterations in a segment
@@ -926,7 +926,7 @@ class HeuGroup18(Agent):
                 # If it hasn't returned, update PF to check the next delivery in the path.
                 # NOTE: if the node after next_n_sol in the path is the depot, stop 
                 if next_n_sol + 1 != len(sol_k['path'])-1:
-                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol])
+                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
 
         # if it has arrived to this point, it means that the time feasibility is 
         # respected for all deliveries in the path after the new one
@@ -1250,7 +1250,7 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 800
+        alns_N_max = 400
         alns_N_IwI = 200
 
         
