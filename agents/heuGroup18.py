@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import time
 import copy
 from agents import *
 from scipy import spatial
@@ -469,7 +468,7 @@ class HeuGroup18(Agent):
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
         self.n_crowdshipped = 0
-        VRP_solution_init = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles())
+        VRP_solution_init = self.compute_VRP(self.env.get_delivery())
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
         #DEBUG
         print(f"[DEBUG] OBJ FUNC BEFORE CROWDSHIPPING: {obj_init}")
@@ -529,7 +528,7 @@ class HeuGroup18(Agent):
 
         return id_to_crowdship 
 
-    def compute_VRP(self, deliveries_to_do, vehicles_dict, alns_N_max=None, alns_N_IwI=None):
+    def compute_VRP(self, deliveries_to_do, alns_N_max=None, alns_N_IwI=None):
         """ 
         Generate an initial feasible solution through the Solomon heuristic.
         The following If statement uses the flag "init_sol_created" to discriminate
@@ -549,6 +548,8 @@ class HeuGroup18(Agent):
 
         if self.vehicles_dict:
             vehicles_dict = self.vehicles_dict
+        else: 
+            vehicles_dict = self.env.get_vehicles()
 
         if not self.learning_flag:
             if not self.init_sol_created:
@@ -1295,7 +1296,7 @@ class HeuGroup18(Agent):
                     
                     #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
                     #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
-                    VRP_solution = self.compute_VRP(self.env.get_delivery(), new_vehicles_dict, alns_N_max, alns_N_IwI)
+                    VRP_solution = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
                     obj = self.env.evaluate_VRP(VRP_solution)
                     # DEBUG
                     print(f"Perm: {veh_order_new}, obj: {obj}")
@@ -1323,7 +1324,7 @@ class HeuGroup18(Agent):
             self.volw = volw_rnd[i]
             #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
-            VRP_solution = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            VRP_solution = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_volw['volw'].append(volw_rnd[i])
             self.data_improv_volw['obj'].append(obj)
@@ -1336,7 +1337,7 @@ class HeuGroup18(Agent):
             self.beta2_c3 = 1-self.beta1_c3
             #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
-            VRP_solution = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            VRP_solution = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_beta1_c3['beta1_c3'].append(beta1_c3_rnd[i])
             self.data_improv_beta1_c3['obj'].append(obj)
@@ -1348,7 +1349,7 @@ class HeuGroup18(Agent):
             self.alns_eps = alns_eps_rnd[i]
             #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
-            VRP_solution = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            VRP_solution = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_alns_eps['alns_eps'].append(alns_eps_rnd[i])
             self.data_improv_alns_eps['obj'].append(obj)
@@ -1360,7 +1361,7 @@ class HeuGroup18(Agent):
             self.alns_p = alns_p_rnd[i]
             #id_deliveries_to_crowdship = self.compute_delivery_to_crowdship(self.env.get_delivery())
             #remaining_deliveries, tot_crowd_cost = self.env.run_crowdsourcing(id_deliveries_to_crowdship)
-            VRP_solution = self.compute_VRP(self.env.get_delivery(), self.env.get_vehicles(), alns_N_max, alns_N_IwI)
+            VRP_solution = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
             obj = self.env.evaluate_VRP(VRP_solution)
             self.data_improv_alns_p['alns_p'].append(alns_p_rnd[i])
             self.data_improv_alns_p['obj'].append(obj)

@@ -17,7 +17,7 @@ if __name__ == '__main__':
         level=logging.INFO, datefmt="%H:%M:%S",
         filemode='w'
     )
-    fp = open("./cfg/setting_2.json", 'r')
+    fp = open("./cfg/setting_1.json", 'r')
     settings = json.load(fp)
     fp.close()
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     remaining_deliveries, tot_crowd_cost = env.run_crowdsourcing(id_deliveries_to_crowdship)
     print("remaining_deliveries: ", remaining_deliveries )
     print("tot_crowd_cost: ", tot_crowd_cost)
-    VRP_solution = agent.compute_VRP(remaining_deliveries, env.get_vehicles())
+    VRP_solution = agent.compute_VRP(remaining_deliveries)
     print("VRP_solution_exact: ", VRP_solution)
 
     env.render_tour(remaining_deliveries, VRP_solution)
