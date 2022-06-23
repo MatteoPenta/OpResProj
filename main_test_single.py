@@ -2,6 +2,7 @@
 import json
 import logging
 from agents import exactVRPAgent
+import time
 import numpy as np
 from envs.deliveryNetwork import DeliveryNetwork
 from agents.exactVRPAgent import ExactVRPAgent
@@ -32,6 +33,7 @@ if __name__ == '__main__':
     # STOP TRAINING
     agent.start_test()
     # TEST
+    start_time = time.time()
     env.prepare_crowdsourcing_scenario()
     id_deliveries_to_crowdship = agent.compute_delivery_to_crowdship(
         env.get_delivery()
@@ -42,6 +44,8 @@ if __name__ == '__main__':
     print("tot_crowd_cost: ", tot_crowd_cost)
     VRP_solution = agent.compute_VRP(remaining_deliveries)
     print("VRP_solution_exact: ", VRP_solution)
+    end_time = time.time()
+    print(f"Time elapsed for the test: {end_time-start_time}")
 
     env.render_tour(remaining_deliveries, VRP_solution)
     obj = env.evaluate_VRP(VRP_solution)

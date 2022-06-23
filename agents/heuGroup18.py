@@ -24,8 +24,10 @@ class HeuGroup18(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = 10000 # max number of iterations
-        self.alns_N_IwI = 5000 # max number of iterations without an improvement
+        self.alns_N_max = (100*8000)/self.env.n_deliveries # max number of iterations
+        self.alns_N_IwI = self.alns_N_max/2 # max number of iterations without an improvement
+        #self.alns_N_max = 10000 
+        #self.alns_N_IwI = 5000 
         self.alns_N_s = 50 # number of iterations in a segment
         self.alns_mu = 0.05 # tuning parameter for the "temperature" of a solution
         self.alns_eps = 0.9998  # cooling rate for the temperature
@@ -462,13 +464,13 @@ class HeuGroup18(Agent):
         self.delivery = deliveries
 
         vehicles_dict = self.env.get_vehicles()
-        #alns_N_max = 8000
-        #alns_N_IwI = 800
+        alns_N_max = self.alns_N_max/2
+        alns_N_IwI = self.alns_N_IwI/2
         n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
         self.n_crowdshipped = 0
-        VRP_solution_init = self.compute_VRP(self.env.get_delivery())
+        VRP_solution_init = self.compute_VRP(self.env.get_delivery(), alns_N_max, alns_N_IwI)
         obj_init = self.env.evaluate_VRP(VRP_solution_init)
         #DEBUG
         print(f"[DEBUG] OBJ FUNC BEFORE CROWDSHIPPING: {obj_init}")
