@@ -24,7 +24,21 @@ class HeuGroup18(Agent):
         self.volw = 1 # weight associated to the volume of the delivery
 
         # ALNS Parameters
-        self.alns_N_max = (100*8000)/self.env.n_deliveries # max number of iterations
+        # max number of iterations
+        if self.env.n_deliveries >= 100:
+            self.alns_N_max = round((3981*7000)/(np.power(self.env.n_deliveries,1.8)))    
+        elif 90 <= self.env.n_deliveries < 100:
+            self.alns_N_max = 7500
+        elif 80 <= self.env.n_deliveries < 90:
+            self.alns_N_max = 8000
+        elif 70 <= self.env.n_deliveries < 80:
+            self.alns_N_max = 10000
+        elif 60 <= self.env.n_deliveries < 70:
+            self.alns_N_max = 23000
+        elif 50 <= self.env.n_deliveries < 60:
+            self.alns_N_max = 31000
+        elif self.env.n_deliveries < 50:
+            self.alns_N_max = 45000 
         self.alns_N_IwI = self.alns_N_max/1.5 # max number of iterations without an improvement
         #self.alns_N_max = 10000 
         #self.alns_N_IwI = 5000 
@@ -1328,8 +1342,8 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = 400
-        alns_N_IwI = 200
+        alns_N_max = self.alns_N_max/17.5
+        alns_N_IwI = alns_N_max/1.5
 
         
         # find a good vehicles permutation only during the first
