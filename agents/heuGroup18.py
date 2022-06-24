@@ -938,7 +938,7 @@ class HeuGroup18(Agent):
 
     def nodeReverseTimeFeasibleVRP(self, sol_k, prev_n_sol, d, next_n_sol):
         """
-        Determine whether REMOVNIG node "d" in the vehicle characterized by "sol_k"
+        Determine whether REMOVING node "d" in the vehicle characterized by "sol_k"
         between nodes indicated by "prev_n_sol" and "next_n_sol" is time feasible.
         Checking time feasibility when removing nodes is necessary since the triangular
         inequality doesn't hold for time distances.
@@ -1268,7 +1268,15 @@ class HeuGroup18(Agent):
                             next_n_id = sol_k['path'][next_n_sol]
                             new_arr_time_next = sol_k['arrival_times'][next_n_sol] - delta_arr_time_next
                     else:
-                        update_flag = False
+                        # old arr time before time window lower bound, new arr time after => different departure time
+                        if new_arr_time_next > self.delivery[next_n_id]['time_window_min']:
+                            delta_arr_time_next = new_arr_time_next - self.delivery[next_n_id]['time_window_min']
+                            next_n_sol +=1
+                            if next_n_sol < len(sol_k['path']):
+                                next_n_id = sol_k['path'][next_n_sol]
+                                new_arr_time_next = sol_k['arrival_times'][next_n_sol] + delta_arr_time_next
+                        else:
+                            update_flag = False
                 else:
                     next_n_sol += 1
 
