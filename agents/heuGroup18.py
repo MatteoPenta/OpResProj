@@ -452,7 +452,11 @@ class HeuGroup18(Agent):
             if sol[v]['n_nodes'] > 0:
                 n = np.random.randint(1,len(sol[v]['path'])-1) 
                 n_id = sol[v]['path'][n]
-                self.removeNode(sol[v], n_id, n-1, n+1)
+                if self.nodeReverseTimeFeasibleVRP(sol[v], n-1, self.delivery[n_id], n+1):
+                    self.removeNode(sol[v], n_id, n-1, n+1)
+                else:
+                    i -= 1
+
             else:
                 i -= 1 # repeat the iteration if an empty vehicle was picked
         return sol
@@ -913,11 +917,11 @@ class HeuGroup18(Agent):
             PF = (arr_time_d + waiting_time_d + dist_d_next) - sol_k['arrival_times'][next_n_sol]
             
             for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
-                # If PF == 0: time feasibility is guaranteed from this point on. Return true
+                # If PF <= 0: time feasibility is guaranteed from this point on. Return true
                 # If PF + arrival time exceeds the time window upper bound, return False
                 next_n_id = sol_k['path'][next_n_sol]
                 next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
-                if PF == 0:
+                if PF <= 0:
                     return True
 
                 if sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
@@ -926,7 +930,64 @@ class HeuGroup18(Agent):
                 # If it hasn't returned, update PF to check the next delivery in the path.
                 # NOTE: if the node after next_n_sol in the path is the depot, stop 
                 if next_n_sol + 1 != len(sol_k['path'])-1:
-                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol+1])
+                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol])
+
+        # if it has arrived to this point, it means that the time feasibility is 
+        # respected for all deliveries in the path after the new one
+        return True
+
+    def nodeReverseTimeFeasibleVRP(self, sol_k, prev_n_sol, d, next_n_sol):
+        """
+        Determine whether REMOVNIG node "d" in the vehicle characterized by "sol_k"
+        between nodes indicated by "prev_n_sol" and "next_n_sol" is time feasible.
+        Checking time feasibility when removing nodes is necessary since the triangular
+        inequality doesn't hold for time distances.
+
+        Parameters
+            :param sol_k : dictionary associated to a vehicle. Contains its path (list), 
+                            arrival times (list), waiting times (list), initial volume (int), 
+                            available volume (int), number of nodes currently included (int),
+                            cost of the vehicle (int).
+            :type Dict
+            
+            :param prev_n_sol : index of the previous node in the path, arrival_times and 
+                                waiting_times lists in the sol_k dictionary
+            :type Int
+
+            :param d : dictionary associated to the node d. Taken from the dictionary of dictionaries self.delivery 
+            :type Dict
+
+            :param next_n_sol : index of the next node in the path, arrival_times and 
+                                waiting_times lists in the sol_k dictionary
+            :type Int
+
+        Output
+            :returns        True/False
+            :rtype          bool
+        """
+        # Evaluate the first Push-forward PF
+        prev_n_id = sol_k['path'][prev_n_sol]
+        next_n_id = sol_k['path'][next_n_sol]
+        dist_prev_next = self.distance_matrix[prev_n_id, next_n_id] # distance between prev_n and next_n
+            
+        if next_n_id != 0: # not the depot (last element in the path)
+            PF = (sol_k['arrival_times'][prev_n_sol] + sol_k['waiting_times'][prev_n_sol] + dist_prev_next) - sol_k['arrival_times'][next_n_sol]
+            
+            for next_n_sol in range(next_n_sol, len(sol_k['path'])-1):
+                # If PF <= 0: time feasibility is guaranteed from this point on. Return true
+                # If PF + arrival time exceeds the time window upper bound, return False
+                next_n_id = sol_k['path'][next_n_sol]
+                next_n_timeupperbound = self.delivery[next_n_id]['time_window_max']
+                if PF <= 0:
+                    return True
+
+                if sol_k['arrival_times'][next_n_sol] + PF > next_n_timeupperbound:
+                    return False
+                
+                # If it hasn't returned, update PF to check the next delivery in the path.
+                # NOTE: if the node after next_n_sol in the path is the depot, stop 
+                if next_n_sol + 1 != len(sol_k['path'])-1:
+                    PF = max(0, PF - sol_k['waiting_times'][next_n_sol])
 
         # if it has arrived to this point, it means that the time feasibility is 
         # respected for all deliveries in the path after the new one
