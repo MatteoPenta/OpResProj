@@ -1195,8 +1195,17 @@ class HeuGroup18(Agent):
                     if next_n_sol < len(sol_k['path']):
                         next_n_id = sol_k['path'][next_n_sol]
                         new_arr_time_next = sol_k['arrival_times'][next_n_sol] + delta_arr_time_next
-                else: # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
-                    additional_delay_flag = False
+                else: 
+                    if old_arr_time_next > self.delivery[next_n_id]['time_window_min']:
+                        # old arr time inside time window, new arr time before lower bound (PUSH BACK)
+                        delta_arr_time_next = old_arr_time_next - self.delivery[next_n_id]['time_window_min']
+                        next_n_sol += 1
+                        if next_n_sol < len(sol_k['path']):
+                            next_n_id = sol_k['path'][next_n_sol]
+                            new_arr_time_next = sol_k['arrival_times'][next_n_sol] - delta_arr_time_next
+                    else:
+                        # otherwise, no additional delay has been introduced from next_n on in the path: exit the while loop 
+                        additional_delay_flag = False
             else:
                 next_n_sol +=1
         
