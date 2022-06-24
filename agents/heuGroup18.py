@@ -39,7 +39,7 @@ class HeuGroup18(Agent):
             self.alns_N_max = 31000
         elif self.env.n_deliveries < 50:
             self.alns_N_max = 45000 
-        self.alns_N_IwI = self.alns_N_max/1.5 # max number of iterations without an improvement
+        self.alns_N_IwI = round(self.alns_N_max/1.5) # max number of iterations without an improvement
         #self.alns_N_max = 10000 
         #self.alns_N_IwI = 5000 
         self.alns_N_s = 50 # number of iterations in a segment
@@ -482,8 +482,8 @@ class HeuGroup18(Agent):
         self.delivery = deliveries
 
         vehicles_dict = self.env.get_vehicles()
-        alns_N_max = self.alns_N_max/2
-        alns_N_IwI = self.alns_N_IwI/2
+        alns_N_max = round(self.alns_N_max/2)
+        alns_N_IwI = round(self.alns_N_IwI/2)
         n_it = 10 # num of iterations
         # Generate a first VRP solution (simplified VRP, less iterations) with no
         # nodes in crowdshipping
@@ -1342,8 +1342,8 @@ class HeuGroup18(Agent):
         self.learning_flag = True
         n = 4 # num of iterations to test each parameter
         # num of iterations used in the ALNS algorithm
-        alns_N_max = self.alns_N_max/17.5
-        alns_N_IwI = alns_N_max/1.5
+        alns_N_max = round(self.alns_N_max/25)
+        alns_N_IwI = round(alns_N_max/1.5)
 
         
         # find a good vehicles permutation only during the first
